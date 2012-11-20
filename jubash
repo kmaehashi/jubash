@@ -1,0 +1,637 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# Jubatus Shell
+# @author Kenichi Maehashi
+
+'''
+  _________         ___                                  
+  \____   _|       | /             ___I_I___             
+      |  |         | |             \__^ ^__/        ____ 
+      |  |         | | ___    ___  __ | |          / __/ 
+      |  | |-|  |-|| |/   \  /   \| | | | |^|  |^|| (__  
+      |  | | |  | ||    ^  ||  ^    | | | | |  | | \__ \ 
+      |  | | \_/  ||    O   || O    | | |_| \_/  | ___) |
+      |  |  \__/|_||_|\___/  \___/|_| |__/ \__/|_| \___/ 
+      | /                                                
+     / /                                                 
+    |/                                                   
+'''
+ 
+import sys
+import inspect
+import cmd, readline
+import re
+import json
+import msgpackrpc
+
+class JubaShell(cmd.Cmd, object):
+    """
+    Base class of Jubatus shell
+    """
+    def __init__(self, host, port, cluster, verbose_mode=False):
+        cmd.Cmd.__init__(self)
+
+        # Server configuration
+        self.host = host
+        self.port = port
+        self.cluster = cluster
+
+        # Shell configuration
+        self.verbose_mode = verbose_mode
+        # TODO: support history management
+
+        # Help configuration
+        self.doc_header = "Commands:"
+        self.undoc_header = "Commands (no help available):"
+        self.misc_header = "Documents:"
+        self.nohelp = "No help available for %s."
+
+        # Register aliases
+        self.register_alias('EOF', 'exit')
+        self.register_alias('ls', 'help')
+
+    def engine_name(self):
+        """
+        Return the name of the engine (e.g., `classifier`).
+        You must override this in subclasses.
+        """
+        raise NotImplementedError
+
+    def start_interactive(self):
+        """
+        Start the interactive shell.
+        """
+        while True:
+            try:
+                if not self.is_connected():
+                    self.connect(self.host, self.port, self.cluster)
+                self.cmdloop()
+                self.disconnect()
+                return
+            except ValueError as e:
+                print "Invalid argument: %s" % str(e.message)
+                continue
+            except msgpackrpc.error.RPCError as e:
+                print "RPC Error: " + str(e.message)
+                self.disconnect()
+
+    def register_alias(self, alias, name):
+        """
+        Register alias function to the existing function.
+        Aliases are not listed by `help` command.
+        """
+        self.__dict__['do_' + alias] = getattr(self, 'do_' + name)
+
+    def emptyline(self):
+        """
+        By default, empty line causes the previous command to run again.
+        This overrides the default handler for emptyline so it behaves like the usual shell.
+        """
+        pass
+
+    def argv2datum(self, argv):
+        if len(argv) % 2 != 0:
+            raise ValueError, "value for the last datum is missing"
+
+        string_values = []
+        num_values = []
+        for i in range(len(argv) / 2):
+            feat_key = argv[i*2]
+            feat_val = argv[i*2+1]
+            if self.is_num(feat_val):
+                num_values.append((feat_key, float(feat_val)))
+            else:
+                string_values.append((feat_key, feat_val))
+        return self.get_types_class('datum')(string_values, num_values)
+
+    def computil_argnum(self, text, line, begidx, endidx):
+        return len(self.argv(line[0:begidx],0)) - 1
+ 
+    def computil_filter(self, text, candidates):
+        return [x for x in candidates if x.startswith(text)]
+
+    def verbose(self, msg):
+        if self.verbose_mode:
+            print msg
+
+    #################################################################
+    # Built-in commands
+    #################################################################
+    def do_exit(self, argv):
+        """Syntax: exit
+        Exit the shell. You can also use EOF (Ctrl-D).
+        """
+        print
+        return True
+
+    def do_connect(self, param):
+        """Syntax: connect host port [cluster]
+        Connect to the specified host, port and cluster (optional).
+        """
+        argv = self.argv(param, 2, 3)
+        host = argv[0]
+        port = argv[1]
+        cluster = self.cluster
+        if len(argv) == 3:
+            cluster = argv[2]
+        print "Connecting to <%s>@%s:%d..." % (cluster, host, int(port))
+        self.disconnect()
+        self.connect(host, int(port), self.cluster)
+
+    def do_verbose(self, param):
+        """Syntax: verbose
+        Toggles the verbose mode.
+        """
+        self.verbose_mode = not self.verbose_mode
+        if self.verbose_mode:
+            print "Verbose mode turned on."
+        else:
+            print "Verbose mode turned off."
+
+    def help_help(self):
+        """
+        Help for help command.
+        """
+        print "Display list of commands or description of the given command"
+
+    #################################################################
+    # RPC connection handling
+    #################################################################
+    def connect(self, host, port, cluster):
+        """
+        Actually, `connect` does not start TCP connection; just create
+        client instance for RPC call.
+        """
+        self.disconnect()
+        self.host = host
+        self.port = port
+        self.cluster = cluster
+        self.client = self.get_client(host, port)
+        self.update_prompt()
+
+    def disconnect(self):
+        """
+        Disconnects from the server, if connected.
+        """
+        if self.is_connected():
+            self.client.client.close()
+            self.client = None
+
+    def is_connected(self):
+        """
+        `is_connected` returns True, if the client can be closed.
+        The TCP connection may already be closed.
+        """
+        return hasattr(self, 'client') and self.client is not None
+
+    def update_prompt(self):
+        """
+        Call this to update the shell prompt upon reconnection etc.
+        """
+        if not hasattr(self, 'prompt_format'):
+            self.prompt = '[Jubatus:' + self.engine_name() + '<' + self.cluster + '>@' + self.host + ':' + str(self.port) + '] # '
+        else:
+            pass #TODO: support custom prompt format
+
+    #################################################################
+    # Accessor to client classes
+    #################################################################
+    def get_client(self, host, port):
+        """
+        Get client instance for given host and port.
+        """
+        return self.get_class('.'.join(['jubatus', self.engine_name(), 'client', self.engine_name()]))(host, port)
+
+    def get_types_class(self, name):
+        """
+        Get class for the data structure of given name.
+        """
+        return self.get_class('.'.join(['jubatus', self.engine_name(), 'types', name]))
+
+    #################################################################
+    # Utilities
+    #################################################################
+    @staticmethod
+    def get_class(name):
+        """
+        Dynamically import and return a class of given name.
+        """
+        levels = name.split('.')
+        (package, module, basename) = (levels[0], '.'.join(levels[:-1]), levels[-1])
+        return getattr(__import__(module, fromlist=[package]), basename)
+
+    @staticmethod
+    def argv(param, minlen, maxlen=1):
+        """
+        Split arguments into array.
+        Raises `ValueError` if minlen is not satisfied.
+        """
+        if param is not None:
+            param2 = param.strip()
+            if param2 != "":
+                result = re.split('\s+', param2, maxlen-1)
+            else:
+                result = []
+            if minlen <= len(result):
+                return result
+        raise ValueError, "Too few arguments (at least %d required)" % minlen
+
+    @staticmethod
+    def is_num(string):
+        return re.match('^\d*\.?\d+$', string) is not None
+
+    @staticmethod
+    def get(engine, host, port, cluster):
+        """
+        Get shell for the specified parameter.
+        """
+        engines = {
+            'classifier' : ClassifierShell,
+            'regression' : RegressionShell,
+            'recommender': RecommenderShell,
+            'stat'       : StatShell,
+            'graph'      : GraphShell,
+        }
+        if engine in engines:
+            return engines[engine](host, port, cluster)
+        return UnknownShell(host, port, cluster)
+
+    @staticmethod
+    def get_guess(host, port, cluster):
+        """
+        Get shell for the specified parameter.
+        This method guesses what engine the server is running.
+        """
+        client = msgpackrpc.Client(msgpackrpc.Address(host, port))
+        results = client.call('get_status', cluster)
+        if len(results) == 0:
+            raise
+        result = results.popitem()[1]
+        is_standalone = True
+        if 'zk' in result and result['zk'] != "":
+            is_standalone = False
+        if not is_standalone and cluster == "":
+            raise
+
+        prog = result['PROGNAME']
+        if prog.startswith('juba'):
+            prog = prog[4:]
+
+        return JubaShell.get(prog, host, port, cluster)
+
+class GenericShell(JubaShell):
+    """
+    Generic implementation of the engine-specific shell that implements
+    set_config, get_config, save, load and get_status.
+    This class cannot be instantiated.
+
+    In most cases, you should inherit this class, rather than creating
+    your own one from scratch for your engine.
+    """
+
+    def do_set_config(self, param):
+        """Syntax: set_config algorithm [config_or_filename]
+        Set algorithm and converter configuration to server.
+        """
+        argv = self.argv(param, 1, 2)
+        algorithm = argv[0]
+        if len(argv) == 1:
+            config = self.get_generic_config()
+        else:
+            config = argv[1]
+        if not config.startswith('{'):
+            filename = argv[1:]
+            print "Loading from file (%s) is not implemented yet." % filename
+        clazz = self.get_types_class('config_data')
+        self.client.set_config(self.cluster, clazz(algorithm, config))
+        # TODO: check retval (currently returns false)
+
+    def complete_set_config(self, text, line, begidx, endidx):
+        argnum = self.computil_argnum(text, line, begidx, endidx)
+        if argnum == 0:
+            return self.computil_filter(text, [
+                'perceptron', 'PA', 'PA1', 'PA2', 'CW', 'AROW', 'NHERD',
+                'inverted_index', 'lsh', 'minhash',
+                ])
+
+    def do_get_config(self, param):
+        """Syntax: get_config
+        Display algorithm and converter configuration set in server.
+        """
+        config = self.client.get_config(self.cluster)
+        self.print_config(config)
+
+    def do_save(self, param):
+        """Syntax: save model_id
+        Save the model.
+        """
+        argv = self.argv(param, 1, 1)
+        model_id = argv[0]
+        if not self.client.save(model_id):
+            print "save failed."
+
+    def do_load(self, param):
+        """Syntax: load model_id
+        Load the given model.
+        """
+        argv = self.argv(param, 1, 1)
+        model_id = argv[0]
+        if not self.client.load(model_id):
+            print "load failed."
+
+    def do_get_status(self, param):
+        """Syntax: get_status
+        Displays status of servers.
+        """
+        status = self.client.get_status(self.cluster)
+        self.print_status(status)
+
+    def get_generic_config(self):
+        return """{
+                "string_filter_types": {},
+                "string_filter_rules": [],
+                "num_filter_types": {},
+                "num_filter_rules": [],
+                "string_types": {},
+                "string_rules": [ { "key": "*", "type": "str", "sample_weight": "bin", "global_weight": "bin" } ],
+                "num_types": {},
+                "num_rules": [ { "key": "*",  "type": "num" } ]
+        }"""
+
+    def print_config(self, config):
+        """
+        Pretty-print the config structure.
+        """
+        config2 = config
+        if hasattr(config2, 'converter'):
+            print 'Converter: %s' % json.dumps(json.loads(config2.pop('converter'), sort_keys=True, indent=4))
+        for key in config2:
+            print '%s: %s' % (key, config2[key])
+
+    def print_status(self, status):
+        """
+        Pretty-print the status structure.
+        """
+        for server_port in status:
+            server_stat = status[server_port]
+            print "Server %s:%s" % tuple(server_port.split('_'))
+            for key in server_stat:
+                print "  %s: %s" % (key, server_stat[key])
+
+class UnknownShell(GenericShell):
+    """
+    Shell for unknown server engines.
+    """
+    def engine_name(self):
+        return 'unknown'
+
+    def get_client(self, host, port):
+        return UnknownShell.UnknownClient(host, port)
+
+    def get_types_class(self, name):
+        return self.get_class('UnknownShell.UnknownTypes.' + name)
+
+    class UnknownClient():
+        def __init__(self, host, port):
+            address = msgpackrpc.Address(host, port)
+            self.client = msgpackrpc.Client(address)
+
+        def set_config(self, name, c):
+            return self.client.call('set_config', name, c)
+
+        def get_config(self, name):
+            return self.client.call('get_config', name)
+
+        def save(self, name, model_id):
+            return self.client.call('save', model_id)
+
+        def load(self, name, model_id):
+            return self.client.call('load', model_id)
+
+        def get_status(self, name):
+            return self.client.call('get_status', name)
+
+    class UnknownTypes():
+        class config_data():
+            def __init__(self, method, config):
+                self.method = method
+                self.config = config
+
+class ClassifierShell(GenericShell):
+    def engine_name(self):
+        return 'classifier'
+
+    def do_train(self, param):
+        """Syntax: train label datum_key datum_value [datum_key datum_value ...]
+        Trains the model with given label and datum.
+        Bulk training is not supported on the command line.
+        """
+        argv = self.argv(param, 3)
+        label = argv[0]
+        d = self.argv2datum(argv[1:])
+        self.verbose("train: label = %s" % label)
+        self.verbose("  datum = %s" % d.__dict__)
+        self.client.train(self.cluster, [(label, d)])
+
+    def do_classify(self, param):
+        """Syntax: classify datum_key datum_value [datum_key datum_value ...]
+        Classify the given datum.
+        Bulk classification is not supported on the command line.
+        """
+        argv = self.argv(param, 2)
+        d = self.argv2datum(argv)
+        self.verbose("classify:")
+        self.verbose("  datum = %s" % d.__dict__)
+        results = self.client.classify(self.cluster, [d])[0]
+        for result in results:
+            print "%s: %s" % (result.label, str(result.prob))
+
+class RegressionShell(GenericShell):
+    def engine_name(self):
+        return 'regression'
+
+    def do_train(self, param):
+        """Syntax: train label datum_key datum_value [datum_key datum_value ...]
+        Trains the model with given label and datum.
+        Bulk training is not supported on the command line.
+        """
+        argv = self.argv(param, 3)
+        label = float(argv[0])
+        d = self.argv2datum(argv[1:])
+        self.verbose("train: label = %s" % label)
+        self.verbose("  datum = %s" % d.__dict__)
+        self.client.train(self.cluster, [(label, d)])
+
+    def do_estimate(self, param):
+        """Syntax: estimate datum_key datum_value [datum_key datum_value ...]
+        Estimate the value for the given datum.
+        Bulk estimation is not supported on the command line.
+        """
+        argv = self.argv(param, 2)
+        d = self.argv2datum(argv)
+        self.verbose("estimate:")
+        self.verbose("  datum = %s" % d.__dict__)
+        result = self.client.estimate(self.cluster, [d])[0]
+        print "%s" % str(result)
+
+class RecommenderShell(GenericShell):
+    def engine_name(self):
+        return 'recommender'
+
+    def do_clear_row(self, param):
+        """Syntax: clear_row row_id
+        Clear the specified row.
+        """
+        argv = self.argv(param, 1)
+        row_id = argv[0]
+        self.client.clear(self.cluster, row_id)
+        # TODO: check retval
+
+    def do_update_row(self, param):
+        """Syntax: update_row row_id datum_key datum_value [datum_key datum_value ...]
+        Update or insert a new row.
+        """
+        argv = self.argv(param, 3)
+        row_id = argv[0]
+        d = self.argv2datum(argv[1:])
+        self.verbose("update_row ID: %s" % row_id)
+        self.verbose("  datum = %s" % d.__dict__)
+        self.client.update_row(self.cluster, row_id, d)
+
+    def do_clear(self, param):
+        """Syntax: clear
+        Clear the model.
+        """
+        self.client.clear(self.cluster)
+        # TODO: check retval
+
+    def do_complete_row_from_id(self, param):
+        print "not implemented yet."
+
+    def do_complete_row_from_data(self, param):
+        print "not implemented yet."
+
+    def do_similar_row_from_id(self, param):
+        print "not implemented yet."
+
+    def do_similar_row_from_data(self, param):
+        print "not implemented yet."
+
+    def do_decode_row(self, param):
+        print "not implemented yet."
+
+    def do_get_all_rows(self, param):
+        print "not implemented yet."
+
+    def do_similarity(self, param):
+        print "not implemented yet."
+
+    def do_l2norm(self, param):
+        print "not implemented yet."
+
+class StatShell(GenericShell):
+    def engine_name(self):
+        return 'stat'
+
+    def do_push(self, param):
+        print "not implemented yet."
+
+    def do_sum(self, param):
+        print "not implemented yet."
+
+    def do_stddev(self, param):
+        print "not implemented yet."
+
+    def do_max(self, param):
+        print "not implemented yet."
+
+    def do_min(self, param):
+        print "not implemented yet."
+
+    def do_entropy(self, param):
+        print "not implemented yet."
+
+    def do_moment(self, param):
+        print "not implemented yet."
+
+class GraphShell(GenericShell):
+    def engine_name(self):
+        return 'graph'
+
+    def do_create_node(self, param):
+        print "not implemented yet."
+
+    def do_remove_node(self, param):
+        print "not implemented yet."
+
+    def do_update_node(self, param):
+        print "not implemented yet."
+
+    def do_create_edge(self, param):
+        print "not implemented yet."
+
+    def do_update_edge(self, param):
+        print "not implemented yet."
+
+    def do_remove_edge(self, param):
+        print "not implemented yet."
+
+    def do_centrality(self, param):
+        print "not implemented yet."
+
+    def do_add_centrality_query(self, param):
+        print "not implemented yet."
+
+    def do_add_shortest_path_query(self, param):
+        print "not implemented yet."
+
+    def do_remove_centrality_query(self, param):
+        print "not implemented yet."
+
+    def do_remove_shortest_path_query(self, param):
+        print "not implemented yet."
+
+    def do_shortest_path(self, param):
+        print "not implemented yet."
+
+    def do_update_index(self, param):
+        print "not implemented yet."
+
+    def do_clear(self, param):
+        print "not implemented yet."
+
+    def do_get_node(self, param):
+        print "not implemented yet."
+
+    def do_get_edge(self, param):
+        print "not implemented yet."
+
+if __name__ == '__main__':
+
+    """
+    TODO:
+
+      $ jubashell -h localhost -p 9199 -c cluster_name -e recommender
+
+       or
+
+      $ jubashell -h localhost -p 9199
+         -> -e is automatically estimated from get_status
+         -> -c is automatically suggested when connecting to server 
+
+       or
+
+      $ jubashell -h localhost -p 9199 -f script.jubash
+         -> run script
+    """
+
+    print __doc__
+    #shell = JubaShell.get('engine_name', 'localhost', 9199, '')
+    shell = JubaShell.get_guess('127.0.0.1', 9199, '')
+    while True:
+        try:
+            shell.start_interactive()
+            sys.exit(0)
+        except KeyboardInterrupt:
+            print

@@ -19,7 +19,6 @@
 '''
  
 import sys
-import inspect
 import cmd, readline
 import re
 import json

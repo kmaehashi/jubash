@@ -296,12 +296,13 @@ class GenericShell(JubaShell):
         argv = self.argv(param, 1, 2)
         algorithm = argv[0]
         if len(argv) == 1:
-            config = self.get_generic_config()
+            config = json.dumps(self.get_generic_config(), sort_keys=True, indent=4)
         else:
             config = argv[1]
         if not config.startswith('{'):
-            filename = argv[1:]
-            print "Loading from file (%s) is not implemented yet." % filename
+            # TODO
+            filename = argv[1]
+            raise ValueError, "loading from file (%s) is not implemented yet." % filename
         clazz = self.get_types_class('config_data')
         self.client.set_config(self.cluster, clazz(algorithm, config))
         # TODO: check retval (currently returns false)
@@ -346,17 +347,43 @@ class GenericShell(JubaShell):
         status = self.client.get_status(self.cluster)
         self.print_status(status)
 
+    def do_show_config_example(self, param):
+        """Syntax: show_config_sample
+        Displays example configuration.
+        """
+        print json.dumps(self.get_generic_config(), sort_keys=True, indent=4)
+
+    def do_test_converter(self, param):
+        pass
+        # TODO: using jubaconv, test conversion for given datum
+
     def get_generic_config(self):
-        return """{
-                "string_filter_types": {},
-                "string_filter_rules": [],
-                "num_filter_types": {},
-                "num_filter_rules": [],
-                "string_types": {},
-                "string_rules": [ { "key": "*", "type": "str", "sample_weight": "bin", "global_weight": "bin" } ],
-                "num_types": {},
-                "num_rules": [ { "key": "*",  "type": "num" } ]
-        }"""
+        config_template = {
+            "string_filter_types": {
+                "detag": { "method": "regexp", "pattern": "<[^>]*>", "replace": "" }
+            },
+            "string_filter_rules": [
+            ],
+            "num_filter_types": {
+                "add_1" : { "method": "add", "value" : "1" }
+            },
+            "num_filter_rules": [
+            ],
+            "string_types": {
+                "unigram" : { "method": "ngram", "char_num": "1" },
+                "bigram"  : { "method": "ngram", "char_num": "2" },
+                "trigram" : { "method": "ngram", "char_num": "3" }
+            },
+            "string_rules": [
+                { "key": "*", "type": "str", "sample_weight": "bin", "global_weight": "bin" }
+            ],
+            "num_types": {
+            },
+            "num_rules": [
+                { "key": "*",  "type": "num" }
+            ]
+        }
+        return config_template
 
     def print_config(self, config):
         """
@@ -364,9 +391,9 @@ class GenericShell(JubaShell):
         """
         config2 = config
         if hasattr(config2, 'converter'):
-            print 'Converter: %s' % json.dumps(json.loads(config2.pop('converter'), sort_keys=True, indent=4))
-        for key in config2:
-            print '%s: %s' % (key, config2[key])
+            print 'converter: %s' % json.dumps(json.loads(config2.__dict__.pop('converter')), sort_keys=True, indent=4)
+        for key in config2.__dict__:
+            print '%s: %s' % (key, getattr(config2, key))
 
     def print_status(self, status):
         """

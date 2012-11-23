@@ -406,6 +406,15 @@ class GenericShell(JubaShell):
             for key in server_stat:
                 print "  %s: %s" % (key, server_stat[key])
 
+    def print_datum(self, datum):
+        """
+        Pretty-print the datum structure.
+        """
+        print json.dumps({
+            "string_values" : datum.string_values,
+            "num_values"    : datum.num_values,
+            })
+
 class UnknownShell(GenericShell):
     """
     Shell for unknown server engines.
@@ -534,22 +543,56 @@ class RecommenderShell(GenericShell):
         # TODO: check retval
 
     def do_complete_row_from_id(self, param):
-        print "not implemented yet."
+        """Syntax: complete_row_from_id id
+        Complete row from the given ID.
+        """
+        argv = self.argv(param, 1, 1)
+        row_id = argv[0]
+        d = self.client.complete_row_from_id(self.cluster, row_id)
+        self.print_datum(d)
 
     def do_complete_row_from_data(self, param):
-        print "not implemented yet."
+        """syntax: complete_row_from_data datum_key datum_value [datum_key datum_value ...]
+        Complete row from the given datum.
+        """
+        argv = self.argv(param, 2)
+        d = self.argv2datum(argv)
+        d = self.client.complete_row_from_data(self.cluster, d)
+        self.print_datum(d)
 
     def do_similar_row_from_id(self, param):
-        print "not implemented yet."
+        """Syntax: similar_row_from_id id
+        Similar row from the given ID.
+        """
+        argv = self.argv(param, 1, 1)
+        row_id = argv[0]
+        d = self.client.similar_row_from_id(self.cluster, row_id)
+        self.print_datum(d)
 
     def do_similar_row_from_data(self, param):
-        print "not implemented yet."
+        """syntax: similar_row_from_data datum_key datum_value [datum_key datum_value ...]
+        Similar row from the given datum.
+        """
+        argv = self.argv(param, 2)
+        d = self.argv2datum(argv)
+        d = self.client.similar_row_from_data(self.cluster, d)
+        self.print_datum(d)
 
     def do_decode_row(self, param):
-        print "not implemented yet."
+        """Syntax: decode_row id
+        Decode the row of given ID.
+        """
+        argv = self.argv(param, 1, 1)
+        row_id = argv[0]
+        d = self.client.decode_row(self.cluster, row_id)
+        self.print_datum(d)
 
     def do_get_all_rows(self, param):
-        print "not implemented yet."
+        """Syntax: get_all_rows
+        Returns all rows. Note that converted rows will not be displayed."""
+        rows = self.client.get_all_rows(self.cluster)
+        for row in rows:
+            print row
 
     def do_similarity(self, param):
         print "not implemented yet."
@@ -561,44 +604,122 @@ class StatShell(GenericShell):
     def engine_name(self):
         return 'stat'
 
+    def do_set_config(self, param):
+        """Syntax: set_config window_size
+        Set window size.
+        """
+        argv = self.argv(param, 1, 1)
+        window_size = int(argv[0])
+        clazz = self.get_types_class('config_data')
+        self.client.set_config(self.cluster, clazz(window_size))
+
     def do_push(self, param):
-        print "not implemented yet."
+        """Syntax: push key value
+        Add value for the specified key.
+        """
+        argv = self.argv(param, 2, 2)
+        key = str(argv[0])
+        value = float(argv[1])
+        self.client.push(self.cluster, key, value)
 
     def do_sum(self, param):
-        print "not implemented yet."
+        """Syntax: sum key
+        Get sum for the specified key.
+        """
+        argv = self.argv(param, 1, 1)
+        key = str(argv[0])
+        print self.client.sum(self.cluster, key)
 
     def do_stddev(self, param):
-        print "not implemented yet."
+        """Syntax: stddev key
+        Get stddev for the specified key.
+        """
+        argv = self.argv(param, 1, 1)
+        key = str(argv[0])
+        print self.client.stddev(self.cluster, key)
 
     def do_max(self, param):
-        print "not implemented yet."
+        """Syntax: max key
+        Get max for the specified key.
+        """
+        argv = self.argv(param, 1, 1)
+        key = str(argv[0])
+        print self.client.max(self.cluster, key)
 
     def do_min(self, param):
-        print "not implemented yet."
+        """Syntax: min key
+        Get min for the specified key.
+        """
+        argv = self.argv(param, 1, 1)
+        key = str(argv[0])
+        print self.client.min(self.cluster, key)
 
     def do_entropy(self, param):
-        print "not implemented yet."
+        """Syntax: entropy key
+        Get entropy for the specified key.
+        """
+        argv = self.argv(param, 1, 1)
+        key = str(argv[0])
+        print self.client.entropy(self.cluster, key)
 
     def do_moment(self, param):
-        print "not implemented yet."
+        """Syntax: moment key n c
+        Get moment for the specified key.
+        """
+        argv = self.argv(param, 3, 3)
+        key = str(argv[0])
+        n = int(argv[1])
+        c = float(argv[2])
+        print self.client.moment(self.cluster, key, n, c)
 
 class GraphShell(GenericShell):
     def engine_name(self):
         return 'graph'
 
+    def do_set_config(self, param):
+        print "Graph does not support set_config"
+
+    def do_get_config(self, param):
+        print "Graph does not support get_config"
+
     def do_create_node(self, param):
-        print "not implemented yet."
+        """Syntax: create_node
+        Create node.
+        """
+        node_id = self.client.create_node(self.cluster)
+        print "%s" % node_id
 
     def do_remove_node(self, param):
-        print "not implemented yet."
+        """Syntax: remove_node node_id
+        Remove the specified node.
+        """
+        argv = self.argv(param, 1, 1)
+        node_id = str(argv[0])
+        self.client.remove_node(self.cluster, node_id)
 
     def do_update_node(self, param):
-        print "not implemented yet."
+        """Syntax: update_node node_id [property_key property_value ...]
+        Update node.
+        """
+        argv = self.argv(param, 1)
+        node_id = argv[0]
+        prop = self.argv2property(argv[1:])
+        self.client.update_node(self.cluster, node_id, prop)
 
     def do_create_edge(self, param):
-        print "not implemented yet."
+        """Syntax: create_edge from_node to_node [property_key property_value ...]
+        Create edge.
+        """
+        argv = self.argv(param, 2)
+        from_node_id = str(argv[0])
+        to_node_id = str(argv[1])
+        prop = self.argv2property(argv[2:])
+        info = self.get_types_class('edge_info')(prop, from_node_id, to_node_id)
+        self.client.create_edge(self.cluster, from_node_id, info)
 
     def do_update_edge(self, param):
+        """Syntax: update_edge ... # Hmm, need to consider the interface?
+        """
         print "not implemented yet."
 
     def do_remove_edge(self, param):
@@ -634,6 +755,15 @@ class GraphShell(GenericShell):
     def do_get_edge(self, param):
         print "not implemented yet."
 
+    def argv2property(self, argv):
+        if len(argv) % 2 != 0:
+            raise ValueError, "value for the last property is missing"
+
+        prop_values = {}
+        for i in range(len(argv) / 2):
+            prop_values[str(argv[i*2])] = str(argv[i*2+1])
+        return prop_values
+
 if __name__ == '__main__':
 
     """
@@ -651,6 +781,11 @@ if __name__ == '__main__':
 
       $ jubashell -h localhost -p 9199 -f script.jubash
          -> run script
+
+       or
+
+      $ jubashell -h localhost -p 9199 -c "set_config lsh"
+         -> run as one-liner
     """
 
     print __doc__

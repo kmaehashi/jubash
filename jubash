@@ -264,6 +264,7 @@ class JubaShell(cmd.Cmd, object):
         """
         client = msgpackrpc.Client(msgpackrpc.Address(host, port))
         results = client.call('get_status', cluster)
+        client.close()
         if len(results) == 0:
             raise
         result = results.popitem()[1]

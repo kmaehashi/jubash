@@ -718,12 +718,25 @@ class GraphShell(GenericShell):
         self.client.create_edge(self.cluster, from_node_id, info)
 
     def do_update_edge(self, param):
-        """Syntax: update_edge ... # Hmm, need to consider the interface?
+        """Syntax: update_edge edge_id from_node to_node [property_key property_value ...]
+        Update edge.
         """
-        print "not implemented yet."
+        argv = self.argv(param, 3)
+        edge_id = long(argv[0])
+        from_node_id = str(argv[1])
+        to_node_id = str(argv[2])
+        prop = self.argv2property(argv[3:])
+        info = self.get_types_class('edge_info')(prop, from_node_id, to_node_id)
+        self.client.update_edge(self.cluster, from_node_id, edge_id, info)
 
     def do_remove_edge(self, param):
-        print "not implemented yet."
+        """Syntax: remove_edge edge_id from_node
+        Remove the specified edge.
+        """
+        argv = self.argv(param, 2)
+        edge_id = long(argv[0])
+        from_node_id = str(argv[1])
+        self.client.remove_edge(self.cluster, from_node_id, edge_id)
 
     def do_centrality(self, param):
         print "not implemented yet."
@@ -747,13 +760,41 @@ class GraphShell(GenericShell):
         print "not implemented yet."
 
     def do_clear(self, param):
-        print "not implemented yet."
+        """Syntax: clear
+        Clear the model.
+        """
+        self.client.clear(self.cluster)
 
     def do_get_node(self, param):
-        print "not implemented yet."
+        """Syntax: get_node node_id
+        Get node information.
+        """
+        argv = self.argv(param, 1)
+        node_id = str(argv[0])
+        info = self.client.get_node(self.cluster, node_id)
+        print "Properties:"
+        for key in info.p:
+            print "  %s: %s" % (key, info.p[key])
+        print "In-Edges:"
+        print "  %s" % str(info.in_edges)
+        print "Out-Edges:"
+        print "  %s" % str(info.out_edges)
 
     def do_get_edge(self, param):
-        print "not implemented yet."
+        """Syntax: get_edge edge_id from_node_id
+        Get edge information.
+        """
+        argv = self.argv(param, 2)
+        edge_id = long(argv[0])
+        from_node_id = long(argv[1])
+        info = self.client.get_node(self.cluster, node_id)
+        print "Properties:"
+        for key in info.p:
+            print "  %s: %s" % (key, info.p[key])
+        print "In-Edges:"
+        print "  %s" % str(info.in_edges)
+        print "Out-Edges:"
+        print "  %s" % str(info.out_edges)
 
     def argv2property(self, argv):
         if len(argv) % 2 != 0:

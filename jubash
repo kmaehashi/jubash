@@ -739,10 +739,25 @@ class GraphShell(GenericShell):
         self.client.remove_edge(self.cluster, from_node_id, edge_id)
 
     def do_centrality(self, param):
-        print "not implemented yet."
+        """Syntax: do_centrality node_id [type]
+        Calculate centrality for the node.
+        "type" is 0 (PageRank) by default.
+        Queries are not supported (empty query is used).
+        """
+        argv = self.argv(param, 1, 2)
+        node_id = str(argv[0])
+        c_type = 0
+        query = self.get_types_class('preset_query')([], [])
+        if len(argv) == 2:
+            c_type = int(argv[1])
+        self.client.centrality(self.cluster, node_id, c_type, query)
 
     def do_add_centrality_query(self, param):
-        print "not implemented yet."
+        """Syntax: add_centrality_query
+        Preset empty query.
+        """
+        query = self.get_types_class('preset_query')([], [])
+        self.client.add_centrality_query(self.cluster, query)
 
     def do_add_shortest_path_query(self, param):
         print "not implemented yet."

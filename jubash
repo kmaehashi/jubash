@@ -24,6 +24,7 @@ import argparse
 import re
 import json
 import msgpackrpc
+import subprocess
 
 class JubaShell(cmd.Cmd, object):
     """
@@ -132,12 +133,18 @@ class JubaShell(cmd.Cmd, object):
     #################################################################
     # Built-in commands
     #################################################################
-    def do_exit(self, argv):
+    def do_exit(self, param):
         """Syntax: exit
         Exit the shell. You can also use EOF (Ctrl-D).
         """
         print
         return True
+
+    def do_exec(self, param):
+        """Syntax: exec command ...
+        Execute the local command.
+        """
+        subprocess.call(param, shell=True)
 
     def do_connect(self, param):
         """Syntax: connect host port [cluster]

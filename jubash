@@ -19,7 +19,7 @@
 '''
  
 import sys
-import cmd, readline
+import cmd, readline, shlex
 import argparse
 import re
 import json
@@ -241,20 +241,20 @@ class JubaShell(cmd.Cmd, object):
         return getattr(__import__(module, fromlist=[package]), basename)
 
     @staticmethod
-    def argv(param, minlen, maxlen=1):
+    def argv(param, minlen, maxlen=-1):
         """
         Split arguments into array.
         Raises `ValueError` if minlen is not satisfied.
         """
-        if param is not None:
-            param2 = param.strip()
-            if param2 != "":
-                result = re.split('\s+', param2, maxlen-1)
-            else:
-                result = []
-            if minlen <= len(result):
-                return result
-        raise ValueError, "Too few arguments (at least %d required)" % minlen
+        if param is not None and param != "":
+            result = shlex.split(param)
+        else:
+            result = []
+        if len(result) < minlen:
+            raise ValueError, "Too few arguments (%d requred at least)" % minlen
+        if maxlen < 0 or maxlen < len(result):
+            raise ValueError, "Too much arguments (%d required at most)" % maxlen
+        return result
 
     @staticmethod
     def is_num(string):
@@ -350,6 +350,7 @@ class GenericShell(JubaShell):
         """Syntax: get_config
         Display algorithm and converter configuration set in server.
         """
+        argv = self.argv(param, 0, 0)
         config = self.client.get_config(self.cluster)
         self.print_config(config)
 
@@ -558,7 +559,7 @@ class RecommenderShell(GenericShell):
         """Syntax: clear_row row_id
         Clear the specified row.
         """
-        argv = self.argv(param, 1)
+        argv = self.argv(param, 1, 1)
         row_id = argv[0]
         self.client.clear(self.cluster, row_id)
         # TODO: check retval
@@ -578,6 +579,7 @@ class RecommenderShell(GenericShell):
         """Syntax: clear
         Clear the model.
         """
+        argv = self.argv(param, 0, 0)
         self.client.clear(self.cluster)
         # TODO: check retval
 
@@ -781,7 +783,7 @@ class GraphShell(GenericShell):
         """Syntax: do_centrality node_id [type]
         Calculate centrality for the node.
         "type" is 0 (PageRank) by default.
-        Queries are not supported (empty query is used).
+        Currenetly, only empty query is supported.
         """
         argv = self.argv(param, 1, 2)
         node_id = str(argv[0])
@@ -794,7 +796,9 @@ class GraphShell(GenericShell):
     def do_add_centrality_query(self, param):
         """Syntax: add_centrality_query
         Preset empty query.
+        Currenetly, only empty query is supported.
         """
+        argv = self.argv(param, 0, 0)
         query = self.get_types_class('preset_query')([], [])
         self.client.add_centrality_query(self.cluster, query)
 
@@ -823,7 +827,7 @@ class GraphShell(GenericShell):
         """Syntax: get_node node_id
         Get node information.
         """
-        argv = self.argv(param, 1)
+        argv = self.argv(param, 1, 1)
         node_id = str(argv[0])
         info = self.client.get_node(self.cluster, node_id)
         print "Properties:"
@@ -838,7 +842,7 @@ class GraphShell(GenericShell):
         """Syntax: get_edge edge_id from_node_id
         Get edge information.
         """
-        argv = self.argv(param, 2)
+        argv = self.argv(param, 2, 2)
         edge_id = long(argv[0])
         from_node_id = long(argv[1])
         info = self.client.get_node(self.cluster, node_id)

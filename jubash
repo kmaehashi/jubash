@@ -99,6 +99,10 @@ class JubaShell(cmd.Cmd, object):
         """
         pass
 
+    def default(self, line):
+        print "Unknown command: %s" % line
+        print "Type `help` for commands available."
+
     def argv2datum(self, argv):
         if len(argv) % 2 != 0:
             raise ValueError, "value for the last datum is missing"

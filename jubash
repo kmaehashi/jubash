@@ -51,7 +51,8 @@ class JubaShell(cmd.Cmd, object):
         self.register_alias('EOF', 'exit')
         self.register_alias('ls', 'help')
 
-    def engine_name(self):
+    @staticmethod
+    def engine_name():
         """
         Return the name of the engine (e.g., `classifier`).
         You must override this in subclasses.
@@ -264,14 +265,11 @@ class JubaShell(cmd.Cmd, object):
 
     @staticmethod
     def get_engines():
-        return {
-            'classifier' : ClassifierShell,
-            'regression' : RegressionShell,
-            'recommender': RecommenderShell,
-            'stat'       : StatShell,
-            'graph'      : GraphShell,
-            'generic'    : UnknownShell
-        }
+        shells = [ClassifierShell, RegressionShell, RecommenderShell, StatShell, GraphShell, GenericShell]
+        engines = {}
+        for shell in shells:
+            engines[shell.engine_name()] = shell
+        return engines
 
     @staticmethod
     def get(engine, host, port, cluster):
@@ -281,7 +279,7 @@ class JubaShell(cmd.Cmd, object):
         engines = JubaShell.get_engines()
         if engine in engines:
             return engines[engine](host, port, cluster)
-        return UnknownShell(host, port, cluster)
+        return GenericShell(host, port, cluster)
 
     @staticmethod
     def get_guess(host, port, cluster):
@@ -312,7 +310,7 @@ class JubaShell(cmd.Cmd, object):
 
         return JubaShell.get(prog, host, port, cluster)
 
-class GenericShell(JubaShell):
+class AbstractGenericShell(JubaShell):
     """
     Generic implementation of the engine-specific shell that implements
     set_config, get_config, save, load and get_status.
@@ -452,22 +450,23 @@ class GenericShell(JubaShell):
             "num_values"    : datum.num_values,
             })
 
-class UnknownShell(GenericShell):
+class GenericShell(AbstractGenericShell):
     """
     Shell for unknown server engines.
     """
-    def engine_name(self):
-        return 'unknown'
+    @staticmethod
+    def engine_name():
+        return 'generic'
 
     def get_client(self, host, port):
-        return UnknownShell.UnknownClient(host, port)
+        return GenericShell.GenericClient(host, port)
 
     def get_types_class(self, name):
         if name == "config_data":
-            return UnknownShell.UnknownTypes.config_data
+            return GenericShell.GenericTypes.config_data
         raise "Unsupported type"
 
-    class UnknownClient():
+    class GenericClient():
         def __init__(self, host, port):
             address = msgpackrpc.Address(host, port)
             self.client = msgpackrpc.Client(address)
@@ -487,7 +486,7 @@ class UnknownShell(GenericShell):
         def get_status(self, name):
             return self.client.call('get_status', name)
 
-    class UnknownTypes():
+    class GenericTypes():
         class config_data():
             def __init__(self, method, config):
                 self.method = method
@@ -500,8 +499,9 @@ class UnknownShell(GenericShell):
             def from_msgpack(arg):
                 return config_data(arg[0], arg[1])
 
-class ClassifierShell(GenericShell):
-    def engine_name(self):
+class ClassifierShell(AbstractGenericShell):
+    @staticmethod
+    def engine_name():
         return 'classifier'
 
     def do_train(self, param):
@@ -529,8 +529,9 @@ class ClassifierShell(GenericShell):
         for result in results:
             print "%s: %s" % (result.label, str(result.prob))
 
-class RegressionShell(GenericShell):
-    def engine_name(self):
+class RegressionShell(AbstractGenericShell):
+    @staticmethod
+    def engine_name():
         return 'regression'
 
     def do_train(self, param):
@@ -557,8 +558,9 @@ class RegressionShell(GenericShell):
         result = self.client.estimate(self.cluster, [d])[0]
         print "%s" % str(result)
 
-class RecommenderShell(GenericShell):
-    def engine_name(self):
+class RecommenderShell(AbstractGenericShell):
+    @staticmethod
+    def engine_name():
         return 'recommender'
 
     def do_clear_row(self, param):
@@ -650,8 +652,9 @@ class RecommenderShell(GenericShell):
         argv = self.argv(param, 0, 0)
         print "not implemented yet."
 
-class StatShell(GenericShell):
-    def engine_name(self):
+class StatShell(AbstractGenericShell):
+    @staticmethod
+    def engine_name():
         return 'stat'
 
     def do_set_config(self, param):
@@ -722,8 +725,9 @@ class StatShell(GenericShell):
         c = float(argv[2])
         print self.client.moment(self.cluster, key, n, c)
 
-class GraphShell(GenericShell):
-    def engine_name(self):
+class GraphShell(AbstractGenericShell):
+    @staticmethod
+    def engine_name():
         return 'graph'
 
     def do_set_config(self, param):

@@ -20,6 +20,7 @@
  
 import sys
 import cmd, readline
+import argparse
 import re
 import json
 import msgpackrpc
@@ -57,7 +58,7 @@ class JubaShell(cmd.Cmd, object):
         """
         raise NotImplementedError
 
-    def start_interactive(self):
+    def start(self, oneshot=None):
         """
         Start the interactive shell.
         """
@@ -65,7 +66,10 @@ class JubaShell(cmd.Cmd, object):
             try:
                 if not self.is_connected():
                     self.connect(self.host, self.port, self.cluster)
-                self.cmdloop()
+                if oneshot:
+                    self.onecmd(oneshot)
+                else:
+                    self.cmdloop()
                 self.disconnect()
                 return
             except ValueError as e:
@@ -74,6 +78,12 @@ class JubaShell(cmd.Cmd, object):
             except msgpackrpc.error.RPCError as e:
                 print "RPC Error: " + str(e.message)
                 self.disconnect()
+            except KeyboardInterrupt: # trap Ctrl-C
+                print
+                self.disconnect()
+            finally:
+                if oneshot:
+                    return
 
     def register_alias(self, alias, name):
         """
@@ -247,17 +257,22 @@ class JubaShell(cmd.Cmd, object):
         return re.match('^\d*\.?\d+$', string) is not None
 
     @staticmethod
-    def get(engine, host, port, cluster):
-        """
-        Get shell for the specified parameter.
-        """
-        engines = {
+    def get_engines():
+        return {
             'classifier' : ClassifierShell,
             'regression' : RegressionShell,
             'recommender': RecommenderShell,
             'stat'       : StatShell,
             'graph'      : GraphShell,
+            'generic'    : UnknownShell
         }
+
+    @staticmethod
+    def get(engine, host, port, cluster):
+        """
+        Get shell for the specified parameter.
+        """
+        engines = JubaShell.get_engines()
         if engine in engines:
             return engines[engine](host, port, cluster)
         return UnknownShell(host, port, cluster)
@@ -841,39 +856,25 @@ class GraphShell(GenericShell):
         return prop_values
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Jubatus Interactive Shell Environment')
+    parser.add_argument('--host',    '-H', type=str, default="127.0.0.1")
+    parser.add_argument('--port',    '-P', type=int, default=9199)
+    parser.add_argument('--cluster', '-C', type=str, default="")
+    parser.add_argument('--engine',  '-e', type=str, default=None, choices=JubaShell.get_engines().keys())
+    parser.add_argument('--command', '-c', type=str, default=None)
+    parser.add_argument('--script',  '-f', type=str, default=None)
+    args = parser.parse_args()
 
-    """
-    TODO:
+    if args.engine is None:
+        shell = JubaShell.get_guess(args.host, args.port, args.cluster)
+        if shell is None:
+            print "Failed to connect"
+            sys.exit(1)
+    else:
+        shell = JubaShell.get(args.engine, args.host, args.port, args.cluster)
 
-      $ jubashell -h localhost -p 9199 -c cluster_name -e recommender
-
-       or
-
-      $ jubashell -h localhost -p 9199
-         -> -e is automatically estimated from get_status
-         -> -c is automatically suggested when connecting to server 
-
-       or
-
-      $ jubashell -h localhost -p 9199 -f script.jubash
-         -> run script
-
-       or
-
-      $ jubashell -h localhost -p 9199 -c "set_config lsh"
-         -> run as one-liner
-    """
-
-    print __doc__
-    #shell = JubaShell.get('engine_name', 'localhost', 9199, '')
-    shell = JubaShell.get_guess('127.0.0.1', 9199, '')
-    if shell is None:
-        print "Failed to connect"
+    if args.script is not None:
+        print "Scripting is not implemented yet."
         sys.exit(1)
 
-    while True:
-        try:
-            shell.start_interactive()
-            sys.exit(0)
-        except KeyboardInterrupt:
-            print
+    shell.start(args.command)

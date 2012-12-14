@@ -49,8 +49,9 @@ class JubaShell(cmd.Cmd, object):
         self.nohelp = "No help available for %s."
 
         # Register aliases
-        self.register_alias('EOF', 'exit')
-        self.register_alias('ls', 'help')
+        self.register_alias('EOF', 'do_exit')
+        self.register_alias('ls', 'do_help')
+        self.register_alias('shell', 'shell_command')
 
     @staticmethod
     def engine_name():
@@ -89,10 +90,10 @@ class JubaShell(cmd.Cmd, object):
 
     def register_alias(self, alias, name):
         """
-        Register alias function to the existing function.
+        Register alias function to the method.
         Aliases are not listed by `help` command.
         """
-        self.__dict__['do_' + alias] = getattr(self, 'do_' + name)
+        self.__dict__['do_' + alias] = getattr(self, name)
 
     def emptyline(self):
         """
@@ -120,11 +121,20 @@ class JubaShell(cmd.Cmd, object):
                 string_values.append((feat_key, feat_val))
         return self.get_types_class('datum')(string_values, num_values)
 
+    def complete(self, text, state):
+        result = super(JubaShell, self).complete(text, state)
+        if len(self.completion_matches) == 1:
+            return self.completion_matches[state] + ' '
+        return result
+
     def computil_argnum(self, text, line, begidx, endidx):
         return len(self.argv(line[0:begidx],0)) - 1
  
     def computil_filter(self, text, candidates):
         return [x for x in candidates if x.startswith(text)]
+
+    def shell_command(self, param):
+        subprocess.call(param, shell=True)
 
     def verbose(self, msg):
         if self.verbose_mode:
@@ -139,12 +149,6 @@ class JubaShell(cmd.Cmd, object):
         """
         print
         return True
-
-    def do_exec(self, param):
-        """Syntax: exec command ...
-        Execute the local command.
-        """
-        subprocess.call(param, shell=True)
 
     def do_connect(self, param):
         """Syntax: connect host port [cluster]

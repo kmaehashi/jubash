@@ -69,7 +69,7 @@ class JubaShell(cmd.Cmd, object):
                 self.disconnect()
                 return
             except ValueError as e:
-                print "Invalid argument: %s" % str(e.message)
+                print "Invalid argument: %s; use `help` command for details" % str(e.message)
                 continue
             except msgpackrpc.error.RPCError as e:
                 print "RPC Error: " + str(e.message)
@@ -139,6 +139,9 @@ class JubaShell(cmd.Cmd, object):
         self.connect(host, int(port), self.cluster)
 
     def do_reconnect(self, param):
+        """Syntax: reconnect
+        Reconnects to the current server.
+        """
         self.disconnect()
         self.connect(self.host, self.port, self.cluster)
 
@@ -163,8 +166,7 @@ class JubaShell(cmd.Cmd, object):
     #################################################################
     def connect(self, host, port, cluster):
         """
-        Actually, `connect` does not start TCP connection; just create
-        client instance for RPC call.
+        Actually, `connect` does not start TCP connection; just create client instance for RPC call.
         """
         self.disconnect()
         self.host = host

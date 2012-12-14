@@ -138,6 +138,10 @@ class JubaShell(cmd.Cmd, object):
         self.disconnect()
         self.connect(host, int(port), self.cluster)
 
+    def do_reconnect(self, param):
+        self.disconnect()
+        self.connect(self.host, self.port, self.cluster)
+
     def do_verbose(self, param):
         """Syntax: verbose
         Toggles the verbose mode.
@@ -329,7 +333,7 @@ class GenericShell(JubaShell):
         """
         argv = self.argv(param, 1, 1)
         model_id = argv[0]
-        if not self.client.save(model_id):
+        if not self.client.save(self.cluster, model_id):
             print "save failed."
 
     def do_load(self, param):
@@ -338,7 +342,7 @@ class GenericShell(JubaShell):
         """
         argv = self.argv(param, 1, 1)
         model_id = argv[0]
-        if not self.client.load(model_id):
+        if not self.client.load(self.cluster, model_id):
             print "load failed."
 
     def do_get_status(self, param):
@@ -426,7 +430,9 @@ class UnknownShell(GenericShell):
         return UnknownShell.UnknownClient(host, port)
 
     def get_types_class(self, name):
-        return self.get_class('UnknownShell.UnknownTypes.' + name)
+        if name == "config_data":
+            return UnknownShell.UnknownTypes.config_data
+        raise "Unsupported type"
 
     class UnknownClient():
         def __init__(self, host, port):
@@ -453,6 +459,13 @@ class UnknownShell(GenericShell):
             def __init__(self, method, config):
                 self.method = method
                 self.config = config
+
+            def to_msgpack(self):
+                return (self.method, self.config)
+
+            @staticmethod
+            def from_msgpack(arg):
+                return config_data(arg[0], arg[1])
 
 class ClassifierShell(GenericShell):
     def engine_name(self):

@@ -727,9 +727,13 @@ class GraphShell(GenericShell):
         return 'graph'
 
     def do_set_config(self, param):
+        """Graph does not support set_config
+        """
         print "Graph does not support set_config"
 
     def do_get_config(self, param):
+        """Graph does not support get_config
+        """
         print "Graph does not support get_config"
 
     def do_create_node(self, param):

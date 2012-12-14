@@ -156,6 +156,7 @@ class JubaShell(cmd.Cmd, object):
         """Syntax: reconnect
         Reconnects to the current server.
         """
+        argv = self.argv(param, 0, 0)
         self.disconnect()
         self.connect(self.host, self.port, self.cluster)
 
@@ -163,6 +164,7 @@ class JubaShell(cmd.Cmd, object):
         """Syntax: verbose
         Toggles the verbose mode.
         """
+        argv = self.argv(param, 0, 0)
         self.verbose_mode = not self.verbose_mode
         if self.verbose_mode:
             print "Verbose mode turned on."
@@ -252,7 +254,7 @@ class JubaShell(cmd.Cmd, object):
             result = []
         if len(result) < minlen:
             raise ValueError, "Too few arguments (%d requred at least)" % minlen
-        if maxlen < 0 or maxlen < len(result):
+        if 0 <= maxlen and maxlen < len(result):
             raise ValueError, "Too much arguments (%d required at most)" % maxlen
         return result
 
@@ -376,6 +378,7 @@ class GenericShell(JubaShell):
         """Syntax: get_status
         Displays status of servers.
         """
+        argv = self.argv(param, 0, 0)
         status = self.client.get_status(self.cluster)
         self.print_status(status)
 
@@ -383,11 +386,14 @@ class GenericShell(JubaShell):
         """Syntax: show_config_sample
         Displays example configuration.
         """
+        argv = self.argv(param, 0, 0)
         print json.dumps(self.get_generic_config(), sort_keys=True, indent=4)
 
+    """
     def do_test_converter(self, param):
         pass
         # TODO: using jubaconv, test conversion for given datum
+    """
 
     def get_generic_config(self):
         config_template = {
@@ -631,14 +637,17 @@ class RecommenderShell(GenericShell):
     def do_get_all_rows(self, param):
         """Syntax: get_all_rows
         Returns all rows. Note that converted rows will not be displayed."""
+        argv = self.argv(param, 0, 0)
         rows = self.client.get_all_rows(self.cluster)
         for row in rows:
             print row
 
     def do_similarity(self, param):
+        argv = self.argv(param, 0, 0)
         print "not implemented yet."
 
     def do_l2norm(self, param):
+        argv = self.argv(param, 0, 0)
         print "not implemented yet."
 
 class StatShell(GenericShell):
@@ -705,7 +714,7 @@ class StatShell(GenericShell):
 
     def do_moment(self, param):
         """Syntax: moment key n c
-        Get moment for the specified key.
+        Get n-th moment about c of values in the specified key.
         """
         argv = self.argv(param, 3, 3)
         key = str(argv[0])
@@ -727,6 +736,7 @@ class GraphShell(GenericShell):
         """Syntax: create_node
         Create node.
         """
+        argv = self.argv(param, 0, 0)
         node_id = self.client.create_node(self.cluster)
         print "%s" % node_id
 
@@ -771,12 +781,15 @@ class GraphShell(GenericShell):
         self.client.update_edge(self.cluster, from_node_id, edge_id, info)
 
     def do_remove_edge(self, param):
-        """Syntax: remove_edge edge_id from_node
+        """Syntax: remove_edge edge_id [from_node]
         Remove the specified edge.
+        from_node is mandatory when in distributed mode.
         """
-        argv = self.argv(param, 2)
+        argv = self.argv(param, 1, 2)
         edge_id = long(argv[0])
-        from_node_id = str(argv[1])
+        from_node_id = ""
+        if len(argv) == 2:
+            from_node_id = str(argv[1])
         self.client.remove_edge(self.cluster, from_node_id, edge_id)
 
     def do_centrality(self, param):
@@ -795,7 +808,7 @@ class GraphShell(GenericShell):
 
     def do_add_centrality_query(self, param):
         """Syntax: add_centrality_query
-        Preset empty query.
+        Preset centrality query.
         Currenetly, only empty query is supported.
         """
         argv = self.argv(param, 0, 0)
@@ -803,24 +816,61 @@ class GraphShell(GenericShell):
         self.client.add_centrality_query(self.cluster, query)
 
     def do_add_shortest_path_query(self, param):
-        print "not implemented yet."
+        """Syntax: add_shortest_path_query
+        Preset shortest_path query.
+        Currenetly, only empty query is supported.
+        """
+        argv = self.argv(param, 0, 0)
+        query = self.get_types_class('preset_query')([], [])
+        self.client.add_shortest_path_query(self.cluster, query)
 
     def do_remove_centrality_query(self, param):
-        print "not implemented yet."
+        """Syntax: remove_centrality_query
+        Remove preset centrality query.
+        Currenetly, only empty query is supported.
+        """
+        argv = self.argv(param, 0, 0)
+        query = self.get_types_class('preset_query')([], [])
+        self.client.remove_centrality_query(self.cluster, query)
 
     def do_remove_shortest_path_query(self, param):
-        print "not implemented yet."
+        """Syntax: remove_shortest_path_query
+        Remove preset shortest_path query.
+        Currenetly, only empty query is supported.
+        """
+        argv = self.argv(param, 0, 0)
+        query = self.get_types_class('preset_query')([], [])
+        self.client.remove_shortest_path_query(self.cluster, query)
 
     def do_shortest_path(self, param):
-        print "not implemented yet."
+        """Syntax: shortest_path src_node dst_node [max_hop]
+        Calculates the shortest path from src_node to dst_node.
+        """
+        argv = self.argv(param, 2, 3)
+        src_node = argv[0]
+        dst_node = argv[1]
+        max_hop = sys.maxint
+        if len(argv) == 3:
+            max_hop = int(argv[2])
+        query = self.get_types_class('preset_query')([], [])
+        req = self.get_types_class('shortest_path_req')(src_node, dst_node, max_hop, query)
+        nodes = self.client.shortest_path(self.cluster, req)
+        for node in nodes:
+            print node
 
     def do_update_index(self, param):
-        print "not implemented yet."
+        """Syntax: update_index
+        Updates the index.
+        You cannot use this method in distributed configuration.
+        """
+        argv = self.argv(param, 0, 0)
+        self.client.update_index(self.cluster)
 
     def do_clear(self, param):
         """Syntax: clear
         Clear the model.
         """
+        argv = self.argv(param, 0, 0)
         self.client.clear(self.cluster)
 
     def do_get_node(self, param):
@@ -839,20 +889,21 @@ class GraphShell(GenericShell):
         print "  %s" % str(info.out_edges)
 
     def do_get_edge(self, param):
-        """Syntax: get_edge edge_id from_node_id
+        """Syntax: get_edge edge_id [from_node_id]
         Get edge information.
+        from_node_id is mandatory when in distributed mode.
         """
-        argv = self.argv(param, 2, 2)
+        argv = self.argv(param, 1, 2)
         edge_id = long(argv[0])
-        from_node_id = long(argv[1])
-        info = self.client.get_node(self.cluster, node_id)
+        from_node_id = "0"
+        if len(argv) == 2:
+            from_node_id = str(argv[1])
+        info = self.client.get_edge(self.cluster, from_node_id, edge_id)
         print "Properties:"
         for key in info.p:
             print "  %s: %s" % (key, info.p[key])
-        print "In-Edges:"
-        print "  %s" % str(info.in_edges)
-        print "Out-Edges:"
-        print "  %s" % str(info.out_edges)
+        print "Source     : %s" % str(info.src)
+        print "Destination: %s" % str(info.tgt)
 
     def argv2property(self, argv):
         if len(argv) % 2 != 0:

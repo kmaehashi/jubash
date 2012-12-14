@@ -267,8 +267,13 @@ class JubaShell(cmd.Cmd, object):
         This method guesses what engine the server is running.
         """
         client = msgpackrpc.Client(msgpackrpc.Address(host, port))
-        results = client.call('get_status', cluster)
-        client.close()
+        try:
+            results = client.call('get_status', cluster)
+            client.close()
+        except msgpackrpc.error.RPCError as e:
+            client.close()
+            return
+
         if len(results) == 0:
             raise
         result = results.popitem()[1]
@@ -860,6 +865,10 @@ if __name__ == '__main__':
     print __doc__
     #shell = JubaShell.get('engine_name', 'localhost', 9199, '')
     shell = JubaShell.get_guess('127.0.0.1', 9199, '')
+    if shell is None:
+        print "Failed to connect"
+        sys.exit(1)
+
     while True:
         try:
             shell.start_interactive()

@@ -88,13 +88,6 @@ class JubaShell(cmd.Cmd, object):
                 if oneshot:
                     return
 
-    def register_alias(self, alias, name):
-        """
-        Register alias function to the method.
-        Aliases are not listed by `help` command.
-        """
-        self.__dict__['do_' + alias] = getattr(self, name)
-
     def emptyline(self):
         """
         By default, empty line causes the previous command to run again.
@@ -106,32 +99,11 @@ class JubaShell(cmd.Cmd, object):
         print "Unknown command: %s" % line
         print "Type `help` for commands available."
 
-    def argv2datum(self, argv):
-        if len(argv) % 2 != 0:
-            raise ValueError, "value for the last datum is missing"
-
-        string_values = []
-        num_values = []
-        for i in range(len(argv) / 2):
-            feat_key = argv[i*2]
-            feat_val = argv[i*2+1]
-            if self.is_num(feat_val):
-                num_values.append((feat_key, float(feat_val)))
-            else:
-                string_values.append((feat_key, feat_val))
-        return self.get_types_class('datum')(string_values, num_values)
-
     def complete(self, text, state):
         result = super(JubaShell, self).complete(text, state)
         if hasattr(self, 'completion_matches') and len(self.completion_matches) == 1:
             return self.completion_matches[state] + ' ' if state == 0 else None
         return result
-
-    def computil_argnum(self, text, line, begidx, endidx):
-        return len(self.argv(line[0:begidx],0)) - 1
- 
-    def computil_filter(self, text, candidates):
-        return [x for x in candidates if x.startswith(text)]
 
     def shell_command(self, param):
         subprocess.call(param, shell=True)
@@ -139,6 +111,22 @@ class JubaShell(cmd.Cmd, object):
     def verbose(self, msg):
         if self.verbose_mode:
             print msg
+
+    def register_alias(self, alias, name):
+        """
+        Register alias function to the method.
+        Aliases are not listed by `help` command.
+        """
+        self.__dict__['do_' + alias] = getattr(self, name)
+
+    def update_prompt(self):
+        """
+        Call this to update the shell prompt upon reconnection etc.
+        """
+        if not hasattr(self, 'prompt_format'):
+            self.prompt = '[Jubatus:' + self.engine_name() + '<' + self.cluster + '>@' + self.host + ':' + str(self.port) + '] # '
+        else:
+            pass #TODO: support custom prompt format
 
     #################################################################
     # Built-in commands
@@ -218,15 +206,6 @@ class JubaShell(cmd.Cmd, object):
         """
         return hasattr(self, 'client') and self.client is not None
 
-    def update_prompt(self):
-        """
-        Call this to update the shell prompt upon reconnection etc.
-        """
-        if not hasattr(self, 'prompt_format'):
-            self.prompt = '[Jubatus:' + self.engine_name() + '<' + self.cluster + '>@' + self.host + ':' + str(self.port) + '] # '
-        else:
-            pass #TODO: support custom prompt format
-
     #################################################################
     # Accessor to client classes
     #################################################################
@@ -258,7 +237,7 @@ class JubaShell(cmd.Cmd, object):
     def argv(param, minlen, maxlen=-1):
         """
         Split arguments into array.
-        Raises `ValueError` if minlen is not satisfied.
+        Raises `ValueError` if the length condition is not satisfied.
         """
         if param is not None and param != "":
             result = shlex.split(param)
@@ -320,6 +299,14 @@ class JubaShell(cmd.Cmd, object):
             prog = prog[4:]
 
         return JubaShell.get(prog, host, port, cluster)
+
+    @staticmethod
+    def computil_argnum(text, line, begidx, endidx):
+        return len(JubaShell.argv(line[0:begidx],0)) - 1
+
+    @staticmethod
+    def computil_filter(text, candidates):
+        return [x for x in candidates if x.startswith(text)]
 
 class AbstractGenericShell(JubaShell):
     """
@@ -398,11 +385,20 @@ class AbstractGenericShell(JubaShell):
         argv = self.argv(param, 0, 0)
         print json.dumps(self.get_generic_config(), sort_keys=True, indent=4)
 
-    """
-    def do_test_converter(self, param):
-        pass
-        # TODO: using jubaconv, test conversion for given datum
-    """
+    def argv2datum(self, argv):
+        if len(argv) % 2 != 0:
+            raise ValueError, "value for the last datum is missing"
+
+        string_values = []
+        num_values = []
+        for i in range(len(argv) / 2):
+            feat_key = argv[i*2]
+            feat_val = argv[i*2+1]
+            if self.is_num(feat_val):
+                num_values.append((feat_key, float(feat_val)))
+            else:
+                string_values.append((feat_key, feat_val))
+        return self.get_types_class('datum')(string_values, num_values)
 
     def get_generic_config(self):
         config_template = {

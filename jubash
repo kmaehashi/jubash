@@ -65,28 +65,33 @@ class JubaShell(cmd.Cmd, object):
         """
         Start the interactive shell.
         """
+        self.update_prompt()
         while True:
             try:
-                if not self.is_connected():
-                    self.connect(self.host, self.port, self.cluster)
                 if oneshot:
-                    self.onecmd(oneshot)
+                    oneshot = self.precmd(oneshot)
+                    stop = self.onecmd(oneshot)
+                    stop = self.postcmd(stop, oneshot)
                 else:
                     self.cmdloop()
-                self.disconnect()
                 return
             except ValueError as e:
                 print "Invalid argument: %s; use `help` command for details" % str(e.message)
-                continue
             except msgpackrpc.error.RPCError as e:
                 print "RPC Error: " + str(e.message)
-                self.disconnect()
             except KeyboardInterrupt: # trap Ctrl-C
                 print
-                self.disconnect()
             finally:
                 if oneshot:
                     return
+
+    def precmd(self, line):
+        self.connect(self.host, self.port, self.cluster)
+        return line
+
+    def postcmd(self, stop, line):
+        self.disconnect()
+        return stop
 
     def emptyline(self):
         """
@@ -151,6 +156,7 @@ class JubaShell(cmd.Cmd, object):
         print "Connecting to <%s>@%s:%d..." % (cluster, host, int(port))
         self.disconnect()
         self.connect(host, int(port), self.cluster)
+        self.update_prompt()
 
     def do_reconnect(self, param):
         """Syntax: reconnect
@@ -189,7 +195,6 @@ class JubaShell(cmd.Cmd, object):
         self.port = port
         self.cluster = cluster
         self.client = self.get_client(host, port)
-        self.update_prompt()
 
     def disconnect(self):
         """

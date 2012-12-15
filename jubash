@@ -123,8 +123,8 @@ class JubaShell(cmd.Cmd, object):
 
     def complete(self, text, state):
         result = super(JubaShell, self).complete(text, state)
-        if len(self.completion_matches) == 1:
-            return self.completion_matches[state] + ' '
+        if hasattr(self, 'completion_matches') and len(self.completion_matches) == 1:
+            return self.completion_matches[state] + ' ' if state == 0 else None
         return result
 
     def computil_argnum(self, text, line, begidx, endidx):

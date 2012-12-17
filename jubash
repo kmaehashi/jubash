@@ -63,7 +63,7 @@ class JubaShell(cmd.Cmd, object):
 
     def start(self, oneshot=None):
         """
-        Start the interactive shell.
+        Start the shell.
         """
         self.update_prompt()
         while True:
@@ -650,7 +650,8 @@ class RecommenderShell(AbstractGenericShell):
 
     def do_get_all_rows(self, param):
         """Syntax: get_all_rows
-        Returns all rows. Note that converted rows will not be displayed."""
+        Returns all rows. Note that converted rows will not be displayed.
+        """
         argv = self.argv(param, 0, 0)
         rows = self.client.get_all_rows(self.cluster)
         for row in rows:

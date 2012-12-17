@@ -26,12 +26,35 @@ import json
 import msgpackrpc
 import subprocess
 
-class JubaShell(cmd.Cmd, object):
+class ExtendedCmd(cmd.Cmd, object):
+    def parseline(self, line):
+        line = line.strip()
+        if not line:
+            return None, None, line
+        elif line[0] == '?':
+            line = 'help ' + line[1:]
+        elif line[0] == '!':
+            if hasattr(self, 'do_shell'):
+                line = 'shell ' + line[1:]
+            else:
+                return None, None, line
+        i, n = 0, len(line)
+        while i < n and line[i] in self.identchars: i = i+1
+        cmd, arg = line[:i], line[i:].strip()
+        return cmd, arg, line
+
+    def complete(self, text, state):
+        result = super(ExtendedCmd, self).complete(text, state)
+        if len(self.completion_matches) == 1:
+            return self.completion_matches[state] + ' ' if state == 0 else None
+        return result
+
+class JubaShell(ExtendedCmd):
     """
     Base class of Jubatus shell
     """
     def __init__(self, host, port, cluster, verbose_mode=False):
-        cmd.Cmd.__init__(self)
+        super(JubaShell, self).__init__()
 
         # Server configuration
         self.host = host
@@ -103,12 +126,6 @@ class JubaShell(cmd.Cmd, object):
     def default(self, line):
         print "Unknown command: %s" % line
         print "Type `help` for commands available."
-
-    def complete(self, text, state):
-        result = super(JubaShell, self).complete(text, state)
-        if hasattr(self, 'completion_matches') and len(self.completion_matches) == 1:
-            return self.completion_matches[state] + ' ' if state == 0 else None
-        return result
 
     def shell_command(self, param):
         subprocess.call(param, shell=True)

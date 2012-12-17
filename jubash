@@ -239,6 +239,22 @@ class JubaShell(cmd.Cmd, object):
         return getattr(__import__(module, fromlist=[package]), basename)
 
     @staticmethod
+    def get_shells():
+        shells = {}
+        work = [JubaShell]
+        while work:
+            parent = work.pop()
+            for child in parent.__subclasses__():
+                if child not in shells.values():
+                    work.append(child)
+                    try:
+                        name = child.engine_name()
+                    except NotImplementedError: # child is an abstract class
+                        continue
+                    shells[name] = child
+        return shells
+
+    @staticmethod
     def argv(param, minlen, maxlen=-1):
         """
         Split arguments into array.
@@ -259,21 +275,13 @@ class JubaShell(cmd.Cmd, object):
         return re.match('^\d*\.?\d+$', string) is not None
 
     @staticmethod
-    def get_engines():
-        shells = [ClassifierShell, RegressionShell, RecommenderShell, StatShell, GraphShell, GenericShell]
-        engines = {}
-        for shell in shells:
-            engines[shell.engine_name()] = shell
-        return engines
-
-    @staticmethod
     def get(engine, host, port, cluster):
         """
         Get shell for the specified parameter.
         """
-        engines = JubaShell.get_engines()
-        if engine in engines:
-            return engines[engine](host, port, cluster)
+        shells = JubaShell.get_shells()
+        if engine in shells.keys():
+            return shells[engine](host, port, cluster)
         return GenericShell(host, port, cluster)
 
     @staticmethod
@@ -940,7 +948,7 @@ if __name__ == '__main__':
     parser.add_argument('--host',    '-H', type=str, default="127.0.0.1")
     parser.add_argument('--port',    '-P', type=int, default=9199)
     parser.add_argument('--cluster', '-C', type=str, default="")
-    parser.add_argument('--engine',  '-e', type=str, default=None, choices=JubaShell.get_engines().keys())
+    parser.add_argument('--engine',  '-e', type=str, default=None, choices=JubaShell.get_shells().keys())
     parser.add_argument('--command', '-c', type=str, default=None)
     parser.add_argument('--script',  '-f', type=str, default=None)
     args = parser.parse_args()

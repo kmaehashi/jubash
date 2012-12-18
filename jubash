@@ -292,43 +292,31 @@ class JubaShell(ExtendedCmd):
         return re.match('^\d*\.?\d+$', string) is not None
 
     @staticmethod
-    def get(engine, host, port, cluster):
+    def get(host, port, cluster, engine=None):
         """
         Get shell for the specified parameter.
         """
+        if not engine:
+            # guess the engine from get_status
+            client = msgpackrpc.Client(msgpackrpc.Address(host, port))
+            try:
+                results = client.call('get_status', cluster)
+                if len(results) == 0:
+                    return None
+            except msgpackrpc.error.RPCError as e:
+                return None
+            finally:
+                client.close()
+            result1 = results.popitem()[1]
+            if not 'PROGNAME' in result1:
+                return None
+            engine = result1['PROGNAME']
+            if engine.startswith('juba'):
+                engine = engine[4:]
         shells = JubaShell.get_shells()
         if engine in shells.keys():
             return shells[engine](host, port, cluster)
         return GenericShell(host, port, cluster)
-
-    @staticmethod
-    def get_guess(host, port, cluster):
-        """
-        Get shell for the specified parameter.
-        This method guesses what engine the server is running.
-        """
-        client = msgpackrpc.Client(msgpackrpc.Address(host, port))
-        try:
-            results = client.call('get_status', cluster)
-            client.close()
-        except msgpackrpc.error.RPCError as e:
-            client.close()
-            return
-
-        if len(results) == 0:
-            raise
-        result = results.popitem()[1]
-        is_standalone = True
-        if 'zk' in result and result['zk'] != "":
-            is_standalone = False
-        if not is_standalone and cluster == "":
-            raise
-
-        prog = result['PROGNAME']
-        if prog.startswith('juba'):
-            prog = prog[4:]
-
-        return JubaShell.get(prog, host, port, cluster)
 
     @staticmethod
     def computil_argnum(text, line, begidx, endidx):
@@ -985,13 +973,10 @@ if __name__ == '__main__':
         parser.print_help()
         sys.exit(1)
 
-    if args.engine is None:
-        shell = JubaShell.get_guess(args.host, args.port, args.cluster)
-        if shell is None:
-            print "Failed to connect"
-            sys.exit(1)
-    else:
-        shell = JubaShell.get(args.engine, args.host, args.port, args.cluster)
+    shell = JubaShell.get(args.host, args.port, args.cluster, args.engine)
+    if not shell:
+        print "Failed to detect engine."
+        sys.exit(1)
 
     if args.script is not None:
         print "Scripting is not implemented yet." # TODO

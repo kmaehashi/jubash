@@ -109,6 +109,7 @@ class JubaShell(ExtendedCmd):
                     return
 
     def precmd(self, line):
+        # TODO this runs on every emptylines, fix this
         self.connect(self.host, self.port, self.cluster)
         return line
 
@@ -284,7 +285,10 @@ class JubaShell(ExtendedCmd):
         if len(result) < minlen:
             raise ValueError, "Too few arguments (%d requred at least)" % minlen
         if 0 <= maxlen and maxlen < len(result):
-            raise ValueError, "Too much arguments (%d required at most)" % maxlen
+            if maxlen == 0:
+                raise ValueError, "Too much arguments (no arguments allowed)"
+            else:
+                raise ValueError, "Too much arguments (%d required at most)" % maxlen
         return result
 
     @staticmethod

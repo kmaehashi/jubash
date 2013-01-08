@@ -173,7 +173,7 @@ class JubaShell(ExtendedCmd):
             cluster = argv[2]
         print "Connecting to <%s>@%s:%d..." % (cluster, host, int(port))
         self.disconnect()
-        self.connect(host, int(port), self.cluster)
+        self.connect(host, int(port), cluster)
         self.update_prompt()
 
     def do_reconnect(self, param):

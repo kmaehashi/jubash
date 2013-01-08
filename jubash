@@ -556,7 +556,7 @@ class ClassifierShell(AbstractGenericShell):
         self.verbose("  datum = %s" % d.__dict__)
         results = self.client.classify(self.cluster, [d])[0]
         for result in results:
-            print "%s: %s" % (result.label, str(result.prob))
+            print "%s: %s" % (result.label, str(result.score))
 
 class RegressionShell(AbstractGenericShell):
     @staticmethod
@@ -629,13 +629,13 @@ class RecommenderShell(AbstractGenericShell):
         d = self.client.complete_row_from_id(self.cluster, row_id)
         self.print_datum(d)
 
-    def do_complete_row_from_data(self, param):
-        """syntax: complete_row_from_data datum_key datum_value [datum_key datum_value ...]
+    def do_complete_row_from_datum(self, param):
+        """syntax: complete_row_from_datum datum_key datum_value [datum_key datum_value ...]
         Complete row from the given datum.
         """
         argv = self.argv(param, 2)
         d = self.argv2datum(argv)
-        d = self.client.complete_row_from_data(self.cluster, d)
+        d = self.client.complete_row_from_datum(self.cluster, d)
         self.print_datum(d)
 
     def do_similar_row_from_id(self, param):
@@ -647,13 +647,13 @@ class RecommenderShell(AbstractGenericShell):
         d = self.client.similar_row_from_id(self.cluster, row_id)
         self.print_datum(d)
 
-    def do_similar_row_from_data(self, param):
-        """syntax: similar_row_from_data datum_key datum_value [datum_key datum_value ...]
+    def do_similar_row_from_datum(self, param):
+        """syntax: similar_row_from_datum datum_key datum_value [datum_key datum_value ...]
         Similar row from the given datum.
         """
         argv = self.argv(param, 2)
         d = self.argv2datum(argv)
-        d = self.client.similar_row_from_data(self.cluster, d)
+        d = self.client.similar_row_from_datum(self.cluster, d)
         self.print_datum(d)
 
     def do_decode_row(self, param):
@@ -674,11 +674,11 @@ class RecommenderShell(AbstractGenericShell):
         for row in rows:
             print row
 
-    def do_similarity(self, param):
+    def do_calc_similarity(self, param):
         argv = self.argv(param, 0, 0)
         print "not implemented yet."
 
-    def do_l2norm(self, param):
+    def do_calc_l2norm(self, param):
         argv = self.argv(param, 0, 0)
         print "not implemented yet."
 
@@ -803,7 +803,7 @@ class GraphShell(AbstractGenericShell):
         from_node_id = str(argv[0])
         to_node_id = str(argv[1])
         prop = self.argv2property(argv[2:])
-        info = self.get_types_class('edge_info')(prop, from_node_id, to_node_id)
+        info = self.get_types_class('edge')(prop, from_node_id, to_node_id)
         self.client.create_edge(self.cluster, from_node_id, info)
 
     def do_update_edge(self, param):
@@ -815,7 +815,7 @@ class GraphShell(AbstractGenericShell):
         from_node_id = str(argv[1])
         to_node_id = str(argv[2])
         prop = self.argv2property(argv[3:])
-        info = self.get_types_class('edge_info')(prop, from_node_id, to_node_id)
+        info = self.get_types_class('edge')(prop, from_node_id, to_node_id)
         self.client.update_edge(self.cluster, from_node_id, edge_id, info)
 
     def do_remove_edge(self, param):
@@ -830,8 +830,8 @@ class GraphShell(AbstractGenericShell):
             from_node_id = str(argv[1])
         self.client.remove_edge(self.cluster, from_node_id, edge_id)
 
-    def do_centrality(self, param):
-        """Syntax: do_centrality node_id [type]
+    def do_get_centrality(self, param):
+        """Syntax: get_centrality node_id [type]
         Calculate centrality for the node.
         "type" is 0 (PageRank) by default.
         Currenetly, only empty query is supported.
@@ -842,7 +842,7 @@ class GraphShell(AbstractGenericShell):
         query = self.get_types_class('preset_query')([], [])
         if len(argv) == 2:
             c_type = int(argv[1])
-        self.client.centrality(self.cluster, node_id, c_type, query)
+        self.client.get_centrality(self.cluster, node_id, c_type, query)
 
     def do_add_centrality_query(self, param):
         """Syntax: add_centrality_query
@@ -880,8 +880,8 @@ class GraphShell(AbstractGenericShell):
         query = self.get_types_class('preset_query')([], [])
         self.client.remove_shortest_path_query(self.cluster, query)
 
-    def do_shortest_path(self, param):
-        """Syntax: shortest_path src_node dst_node [max_hop]
+    def do_get_shortest_path(self, param):
+        """Syntax: get_shortest_path src_node dst_node [max_hop]
         Calculates the shortest path from src_node to dst_node.
         """
         argv = self.argv(param, 2, 3)
@@ -892,7 +892,7 @@ class GraphShell(AbstractGenericShell):
             max_hop = int(argv[2])
         query = self.get_types_class('preset_query')([], [])
         req = self.get_types_class('shortest_path_req')(src_node, dst_node, max_hop, query)
-        nodes = self.client.shortest_path(self.cluster, req)
+        nodes = self.client.get_shortest_path(self.cluster, req)
         for node in nodes:
             print node
 
@@ -940,8 +940,8 @@ class GraphShell(AbstractGenericShell):
         print "Properties:"
         for key in info.p:
             print "  %s: %s" % (key, info.p[key])
-        print "Source     : %s" % str(info.src)
-        print "Destination: %s" % str(info.tgt)
+        print "Source     : %s" % str(info.source)
+        print "Destination: %s" % str(info.target)
 
     def argv2property(self, argv):
         if len(argv) % 2 != 0:

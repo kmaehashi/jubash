@@ -1,7 +1,7 @@
 Jubash
 ======
 
-An interactive shell environment to try out Jubatus.
+Jubash is an interactive shell environment to try out Jubatus on the command line.
 
 Requirements
 ------------
@@ -13,4 +13,4 @@ Requirements
 License
 -------
 
-jubash is licensed under LGPL 2.1.
+Jubash is licensed under LGPL 2.1.

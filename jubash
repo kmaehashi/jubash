@@ -801,7 +801,7 @@ class GraphShell(AbstractGenericShell):
         if len(argv) == 3:
             max_hop = int(argv[2])
         query = self.get_types_class('preset_query')([], [])
-        req = self.get_types_class('shortest_path_req')(src_node, dst_node, max_hop, query)
+        req = self.get_types_class('shortest_path_query')(src_node, dst_node, max_hop, query)
         nodes = self.client.get_shortest_path(self.cluster, req)
         for node in nodes:
             print node

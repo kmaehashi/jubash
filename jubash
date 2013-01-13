@@ -841,6 +841,67 @@ class GraphShell(AbstractGenericShell):
             prop_values[str(argv[i*2])] = str(argv[i*2+1])
         return prop_values
 
+class AnomalyShell(AbstractGenericShell):
+    @staticmethod
+    def engine_name():
+        return 'anomaly'
+
+    def do_clear_row(self, param):
+        """Syntax: clear_row row_id
+        Clear the specified row.
+        """
+        argv = self.argv(param, 1, 1)
+        row_id = argv[0]
+        assert(self.client.clear(self.cluster, row_id) == True)
+
+    def do_add(self, param):
+        """Syntax: add datum_key datum_value [datum_key datum_value ...]
+        Add a point.
+        """
+        argv = self.argv(param, 2)
+        d = self.argv2datum(argv)
+        (row_id, score) = self.client.add(self.cluster, d)
+        print "Row ID: %s" % row_id
+        print "Score: %g" % score
+
+    def do_update(self, param):
+        """Syntax: update row_id datum_key datum_value [datum_key datum_value ...]
+        Update a point.
+        """
+        argv = self.argv(param, 3)
+        row_id = argv[0]
+        d = self.argv2datum(argv[1:])
+        self.verbose("update ID: %s" % row_id)
+        self.verbose("  datum = %s" % d.__dict__)
+        score = self.client.update(self.cluster, row_id, d)
+        print "Score: %g" % score
+
+    def do_clear(self, param):
+        """Syntax: clear
+        Clear the model.
+        """
+        argv = self.argv(param, 0, 0)
+        assert(self.client.clear(self.cluster) == True)
+
+    def do_calc_score(self, param):
+        """Syntax: calc_score datum_key datum_value [datum_key datum_value ...]
+        Calculate an anomaly measure value without adding a point.
+        """
+        argv = self.argv(param, 2)
+        d = self.argv2datum(argv)
+        score = self.client.calc_score(self.cluster, d)
+        print score
+        print "Score: %g" % score
+
+    def do_get_all_rows(self, param):
+        """Syntax: get_all_rows
+        Returns all rows. Note that converted rows will not be displayed.
+        """
+        argv = self.argv(param, 0, 0)
+        rows = self.client.get_all_rows(self.cluster)
+        for row in rows:
+            print row
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Jubatus Interactive Shell Environment', add_help=False)
 

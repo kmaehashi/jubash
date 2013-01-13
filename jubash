@@ -333,38 +333,12 @@ class JubaShell(ExtendedCmd):
 class AbstractGenericShell(JubaShell):
     """
     Generic implementation of the engine-specific shell that implements
-    set_config, get_config, save, load and get_status.
+    get_config, save, load and get_status.
     This class cannot be instantiated.
 
     In most cases, you should inherit this class, rather than creating
     your own one from scratch for your engine.
     """
-
-    def do_set_config(self, param):
-        """Syntax: set_config algorithm [config_or_filename]
-        Set algorithm and converter configuration to server.
-        """
-        argv = self.argv(param, 1, 2)
-        algorithm = argv[0]
-        if len(argv) == 1:
-            config = json.dumps(self.get_generic_config(), sort_keys=True, indent=4)
-        else:
-            config = argv[1]
-        if not config.startswith('{'):
-            # TODO
-            filename = argv[1]
-            raise ValueError, "loading from file (%s) is not implemented yet." % filename
-        clazz = self.get_types_class('config_data')
-        self.client.set_config(self.cluster, clazz(algorithm, config))
-        # TODO: check retval (currently returns false)
-
-    def complete_set_config(self, text, line, begidx, endidx):
-        argnum = self.computil_argnum(text, line, begidx, endidx)
-        if argnum == 0:
-            return self.computil_filter(text, [
-                'perceptron', 'PA', 'PA1', 'PA2', 'CW', 'AROW', 'NHERD',
-                'inverted_index', 'lsh', 'minhash',
-                ])
 
     def do_get_config(self, param):
         """Syntax: get_config
@@ -372,7 +346,7 @@ class AbstractGenericShell(JubaShell):
         """
         argv = self.argv(param, 0, 0)
         config = self.client.get_config(self.cluster)
-        self.print_config(config)
+        print json.dumps(json.loads(config), sort_keys=True, indent=4)
 
     def do_save(self, param):
         """Syntax: save model_id
@@ -400,13 +374,6 @@ class AbstractGenericShell(JubaShell):
         status = self.client.get_status(self.cluster)
         self.print_status(status)
 
-    def do_show_config_example(self, param):
-        """Syntax: show_config_sample
-        Displays example configuration.
-        """
-        argv = self.argv(param, 0, 0)
-        print json.dumps(self.get_generic_config(), sort_keys=True, indent=4)
-
     def argv2datum(self, argv):
         if len(argv) % 2 != 0:
             raise ValueError, "value for the last datum is missing"
@@ -421,44 +388,6 @@ class AbstractGenericShell(JubaShell):
             else:
                 string_values.append((feat_key, feat_val))
         return self.get_types_class('datum')(string_values, num_values)
-
-    def get_generic_config(self):
-        config_template = {
-            "string_filter_types": {
-                "detag": { "method": "regexp", "pattern": "<[^>]*>", "replace": "" }
-            },
-            "string_filter_rules": [
-            ],
-            "num_filter_types": {
-                "add_1" : { "method": "add", "value" : "1" }
-            },
-            "num_filter_rules": [
-            ],
-            "string_types": {
-                "unigram" : { "method": "ngram", "char_num": "1" },
-                "bigram"  : { "method": "ngram", "char_num": "2" },
-                "trigram" : { "method": "ngram", "char_num": "3" }
-            },
-            "string_rules": [
-                { "key": "*", "type": "str", "sample_weight": "bin", "global_weight": "bin" }
-            ],
-            "num_types": {
-            },
-            "num_rules": [
-                { "key": "*",  "type": "num" }
-            ]
-        }
-        return config_template
-
-    def print_config(self, config):
-        """
-        Pretty-print the config structure.
-        """
-        config2 = config
-        if hasattr(config2, 'converter'):
-            print 'converter: %s' % json.dumps(json.loads(config2.__dict__.pop('converter')), sort_keys=True, indent=4)
-        for key in config2.__dict__:
-            print '%s: %s' % (key, getattr(config2, key))
 
     def print_status(self, status):
         """
@@ -490,18 +419,10 @@ class GenericShell(AbstractGenericShell):
     def get_client(self, host, port):
         return GenericShell.GenericClient(host, port)
 
-    def get_types_class(self, name):
-        if name == "config_data":
-            return GenericShell.GenericTypes.config_data
-        raise "Unsupported type"
-
     class GenericClient():
         def __init__(self, host, port):
             address = msgpackrpc.Address(host, port)
             self.client = msgpackrpc.Client(address)
-
-        def set_config(self, name, c):
-            return self.client.call('set_config', name, c)
 
         def get_config(self, name):
             return self.client.call('get_config', name)
@@ -514,19 +435,6 @@ class GenericShell(AbstractGenericShell):
 
         def get_status(self, name):
             return self.client.call('get_status', name)
-
-    class GenericTypes():
-        class config_data():
-            def __init__(self, method, config):
-                self.method = method
-                self.config = config
-
-            def to_msgpack(self):
-                return (self.method, self.config)
-
-            @staticmethod
-            def from_msgpack(arg):
-                return config_data(arg[0], arg[1])
 
 class ClassifierShell(AbstractGenericShell):
     @staticmethod
@@ -687,15 +595,6 @@ class StatShell(AbstractGenericShell):
     def engine_name():
         return 'stat'
 
-    def do_set_config(self, param):
-        """Syntax: set_config window_size
-        Set window size.
-        """
-        argv = self.argv(param, 1, 1)
-        window_size = int(argv[0])
-        clazz = self.get_types_class('config_data')
-        self.client.set_config(self.cluster, clazz(window_size))
-
     def do_push(self, param):
         """Syntax: push key value
         Add value for the specified key.
@@ -759,16 +658,6 @@ class GraphShell(AbstractGenericShell):
     @staticmethod
     def engine_name():
         return 'graph'
-
-    def do_set_config(self, param):
-        """Graph does not support set_config
-        """
-        print "Graph does not support set_config"
-
-    def do_get_config(self, param):
-        """Graph does not support get_config
-        """
-        print "Graph does not support get_config"
 
     def do_create_node(self, param):
         """Syntax: create_node

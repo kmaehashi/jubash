@@ -97,19 +97,14 @@ class JubaShell(ExtendedCmd):
         """
         raise NotImplementedError
 
-    def start(self, oneshot=None):
+    def start(self):
         """
-        Start the shell.
+        Start the interactive shell.
         """
         self.update_prompt()
         while True:
             try:
-                if oneshot:
-                    oneshot = self.precmd(oneshot)
-                    stop = self.onecmd(oneshot)
-                    stop = self.postcmd(stop, oneshot)
-                else:
-                    self.cmdloop()
+                self.cmdloop()
                 return
             except ValueError as e:
                 print "Invalid argument: %s; use `help` command for details" % str(e.message)
@@ -117,9 +112,22 @@ class JubaShell(ExtendedCmd):
                 print "RPC Error: " + str(e.message)
             except KeyboardInterrupt: # trap Ctrl-C
                 print
-            finally:
-                if oneshot:
-                    return
+
+    def run(self, command):
+        """
+        Run the given single command.
+        """
+        try:
+            command = self.precmd(command)
+            print ">> %s" % command
+            stop = self.onecmd(command)
+            stop = self.postcmd(stop, command)
+        except ValueError as e:
+            print "Invalid argument: %s" % str(e.message)
+        except msgpackrpc.error.RPCError as e:
+            print "RPC Error: " + str(e.message)
+        except KeyboardInterrupt: # trap Ctrl-C
+            print "Interrupted."
 
     def precmd(self, line):
         # TODO this runs on every emptylines, fix this
@@ -945,8 +953,12 @@ if __name__ == '__main__':
         print "Failed to detect engine."
         sys.exit(1)
 
-    if args.script is not None:
-        print "Scripting is not implemented yet." # TODO
+    if args.script:
+        for line in open(args.script, 'r'):
+            shell.run(line.rstrip())
         sys.exit(1)
 
-    shell.start(args.command)
+    if args.command:
+        shell.run(args.command)
+    else:
+        shell.start()

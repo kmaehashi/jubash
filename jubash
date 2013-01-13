@@ -5,19 +5,19 @@
 # @author Kenichi Maehashi
 
 '''
-  _________         ___                                  
-  \____   _|       | /             ___I_I___             
-      |  |         | |             \__^ ^__/        ____ 
-      |  |         | | ___    ___  __ | |          / __/ 
-      |  | |-|  |-|| |/   \  /   \| | | | |^|  |^|| (__  
-      |  | | |  | ||    ^  ||  ^    | | | | |  | | \__ \ 
+  _________         ___
+  \____   _|       | /             ___I_I___
+      |  |         | |             \__^ ^__/        ____
+      |  |         | | ___    ___  __ | |          / __/
+      |  | |-|  |-|| |/   \  /   \| | | | |^|  |^|| (__
+      |  | | |  | ||    ^  ||  ^    | | | | |  | | \__ \
       |  | | \_/  ||    O   || O    | | |_| \_/  | ___) |
-      |  |  \__/|_||_|\___/  \___/|_| |__/ \__/|_| \___/ 
-      | /                                                
-     / /                                                 
-    |/                                                   
+      |  |  \__/|_||_|\___/  \___/|_| |__/ \__/|_| \___/
+      | /
+     / /
+    |/
 '''
- 
+
 import sys
 import cmd, readline, shlex
 import argparse
@@ -173,7 +173,7 @@ class JubaShell(ExtendedCmd):
             cluster = argv[2]
         print "Connecting to <%s>@%s:%d..." % (cluster, host, int(port))
         self.disconnect()
-        self.connect(host, int(port), self.cluster)
+        self.connect(host, int(port), cluster)
         self.update_prompt()
 
     def do_reconnect(self, param):
@@ -333,38 +333,12 @@ class JubaShell(ExtendedCmd):
 class AbstractGenericShell(JubaShell):
     """
     Generic implementation of the engine-specific shell that implements
-    set_config, get_config, save, load and get_status.
+    get_config, save, load and get_status.
     This class cannot be instantiated.
 
     In most cases, you should inherit this class, rather than creating
     your own one from scratch for your engine.
     """
-
-    def do_set_config(self, param):
-        """Syntax: set_config algorithm [config_or_filename]
-        Set algorithm and converter configuration to server.
-        """
-        argv = self.argv(param, 1, 2)
-        algorithm = argv[0]
-        if len(argv) == 1:
-            config = json.dumps(self.get_generic_config(), sort_keys=True, indent=4)
-        else:
-            config = argv[1]
-        if not config.startswith('{'):
-            # TODO
-            filename = argv[1]
-            raise ValueError, "loading from file (%s) is not implemented yet." % filename
-        clazz = self.get_types_class('config_data')
-        self.client.set_config(self.cluster, clazz(algorithm, config))
-        # TODO: check retval (currently returns false)
-
-    def complete_set_config(self, text, line, begidx, endidx):
-        argnum = self.computil_argnum(text, line, begidx, endidx)
-        if argnum == 0:
-            return self.computil_filter(text, [
-                'perceptron', 'PA', 'PA1', 'PA2', 'CW', 'AROW', 'NHERD',
-                'inverted_index', 'lsh', 'minhash',
-                ])
 
     def do_get_config(self, param):
         """Syntax: get_config
@@ -372,7 +346,7 @@ class AbstractGenericShell(JubaShell):
         """
         argv = self.argv(param, 0, 0)
         config = self.client.get_config(self.cluster)
-        self.print_config(config)
+        print json.dumps(json.loads(config), sort_keys=True, indent=4)
 
     def do_save(self, param):
         """Syntax: save model_id
@@ -400,13 +374,6 @@ class AbstractGenericShell(JubaShell):
         status = self.client.get_status(self.cluster)
         self.print_status(status)
 
-    def do_show_config_example(self, param):
-        """Syntax: show_config_sample
-        Displays example configuration.
-        """
-        argv = self.argv(param, 0, 0)
-        print json.dumps(self.get_generic_config(), sort_keys=True, indent=4)
-
     def argv2datum(self, argv):
         if len(argv) % 2 != 0:
             raise ValueError, "value for the last datum is missing"
@@ -421,44 +388,6 @@ class AbstractGenericShell(JubaShell):
             else:
                 string_values.append((feat_key, feat_val))
         return self.get_types_class('datum')(string_values, num_values)
-
-    def get_generic_config(self):
-        config_template = {
-            "string_filter_types": {
-                "detag": { "method": "regexp", "pattern": "<[^>]*>", "replace": "" }
-            },
-            "string_filter_rules": [
-            ],
-            "num_filter_types": {
-                "add_1" : { "method": "add", "value" : "1" }
-            },
-            "num_filter_rules": [
-            ],
-            "string_types": {
-                "unigram" : { "method": "ngram", "char_num": "1" },
-                "bigram"  : { "method": "ngram", "char_num": "2" },
-                "trigram" : { "method": "ngram", "char_num": "3" }
-            },
-            "string_rules": [
-                { "key": "*", "type": "str", "sample_weight": "bin", "global_weight": "bin" }
-            ],
-            "num_types": {
-            },
-            "num_rules": [
-                { "key": "*",  "type": "num" }
-            ]
-        }
-        return config_template
-
-    def print_config(self, config):
-        """
-        Pretty-print the config structure.
-        """
-        config2 = config
-        if hasattr(config2, 'converter'):
-            print 'converter: %s' % json.dumps(json.loads(config2.__dict__.pop('converter')), sort_keys=True, indent=4)
-        for key in config2.__dict__:
-            print '%s: %s' % (key, getattr(config2, key))
 
     def print_status(self, status):
         """
@@ -490,18 +419,10 @@ class GenericShell(AbstractGenericShell):
     def get_client(self, host, port):
         return GenericShell.GenericClient(host, port)
 
-    def get_types_class(self, name):
-        if name == "config_data":
-            return GenericShell.GenericTypes.config_data
-        raise "Unsupported type"
-
     class GenericClient():
         def __init__(self, host, port):
             address = msgpackrpc.Address(host, port)
             self.client = msgpackrpc.Client(address)
-
-        def set_config(self, name, c):
-            return self.client.call('set_config', name, c)
 
         def get_config(self, name):
             return self.client.call('get_config', name)
@@ -514,19 +435,6 @@ class GenericShell(AbstractGenericShell):
 
         def get_status(self, name):
             return self.client.call('get_status', name)
-
-    class GenericTypes():
-        class config_data():
-            def __init__(self, method, config):
-                self.method = method
-                self.config = config
-
-            def to_msgpack(self):
-                return (self.method, self.config)
-
-            @staticmethod
-            def from_msgpack(arg):
-                return config_data(arg[0], arg[1])
 
 class ClassifierShell(AbstractGenericShell):
     @staticmethod
@@ -556,7 +464,7 @@ class ClassifierShell(AbstractGenericShell):
         self.verbose("  datum = %s" % d.__dict__)
         results = self.client.classify(self.cluster, [d])[0]
         for result in results:
-            print "%s: %s" % (result.label, str(result.prob))
+            print "%s: %s" % (result.label, str(result.score))
 
 class RegressionShell(AbstractGenericShell):
     @staticmethod
@@ -629,13 +537,13 @@ class RecommenderShell(AbstractGenericShell):
         d = self.client.complete_row_from_id(self.cluster, row_id)
         self.print_datum(d)
 
-    def do_complete_row_from_data(self, param):
-        """syntax: complete_row_from_data datum_key datum_value [datum_key datum_value ...]
+    def do_complete_row_from_datum(self, param):
+        """syntax: complete_row_from_datum datum_key datum_value [datum_key datum_value ...]
         Complete row from the given datum.
         """
         argv = self.argv(param, 2)
         d = self.argv2datum(argv)
-        d = self.client.complete_row_from_data(self.cluster, d)
+        d = self.client.complete_row_from_datum(self.cluster, d)
         self.print_datum(d)
 
     def do_similar_row_from_id(self, param):
@@ -647,13 +555,13 @@ class RecommenderShell(AbstractGenericShell):
         d = self.client.similar_row_from_id(self.cluster, row_id)
         self.print_datum(d)
 
-    def do_similar_row_from_data(self, param):
-        """syntax: similar_row_from_data datum_key datum_value [datum_key datum_value ...]
+    def do_similar_row_from_datum(self, param):
+        """syntax: similar_row_from_datum datum_key datum_value [datum_key datum_value ...]
         Similar row from the given datum.
         """
         argv = self.argv(param, 2)
         d = self.argv2datum(argv)
-        d = self.client.similar_row_from_data(self.cluster, d)
+        d = self.client.similar_row_from_datum(self.cluster, d)
         self.print_datum(d)
 
     def do_decode_row(self, param):
@@ -674,11 +582,11 @@ class RecommenderShell(AbstractGenericShell):
         for row in rows:
             print row
 
-    def do_similarity(self, param):
+    def do_calc_similarity(self, param):
         argv = self.argv(param, 0, 0)
         print "not implemented yet."
 
-    def do_l2norm(self, param):
+    def do_calc_l2norm(self, param):
         argv = self.argv(param, 0, 0)
         print "not implemented yet."
 
@@ -686,15 +594,6 @@ class StatShell(AbstractGenericShell):
     @staticmethod
     def engine_name():
         return 'stat'
-
-    def do_set_config(self, param):
-        """Syntax: set_config window_size
-        Set window size.
-        """
-        argv = self.argv(param, 1, 1)
-        window_size = int(argv[0])
-        clazz = self.get_types_class('config_data')
-        self.client.set_config(self.cluster, clazz(window_size))
 
     def do_push(self, param):
         """Syntax: push key value
@@ -760,16 +659,6 @@ class GraphShell(AbstractGenericShell):
     def engine_name():
         return 'graph'
 
-    def do_set_config(self, param):
-        """Graph does not support set_config
-        """
-        print "Graph does not support set_config"
-
-    def do_get_config(self, param):
-        """Graph does not support get_config
-        """
-        print "Graph does not support get_config"
-
     def do_create_node(self, param):
         """Syntax: create_node
         Create node.
@@ -803,7 +692,7 @@ class GraphShell(AbstractGenericShell):
         from_node_id = str(argv[0])
         to_node_id = str(argv[1])
         prop = self.argv2property(argv[2:])
-        info = self.get_types_class('edge_info')(prop, from_node_id, to_node_id)
+        info = self.get_types_class('edge')(prop, from_node_id, to_node_id)
         self.client.create_edge(self.cluster, from_node_id, info)
 
     def do_update_edge(self, param):
@@ -815,7 +704,7 @@ class GraphShell(AbstractGenericShell):
         from_node_id = str(argv[1])
         to_node_id = str(argv[2])
         prop = self.argv2property(argv[3:])
-        info = self.get_types_class('edge_info')(prop, from_node_id, to_node_id)
+        info = self.get_types_class('edge')(prop, from_node_id, to_node_id)
         self.client.update_edge(self.cluster, from_node_id, edge_id, info)
 
     def do_remove_edge(self, param):
@@ -830,8 +719,8 @@ class GraphShell(AbstractGenericShell):
             from_node_id = str(argv[1])
         self.client.remove_edge(self.cluster, from_node_id, edge_id)
 
-    def do_centrality(self, param):
-        """Syntax: do_centrality node_id [type]
+    def do_get_centrality(self, param):
+        """Syntax: get_centrality node_id [type]
         Calculate centrality for the node.
         "type" is 0 (PageRank) by default.
         Currenetly, only empty query is supported.
@@ -842,7 +731,7 @@ class GraphShell(AbstractGenericShell):
         query = self.get_types_class('preset_query')([], [])
         if len(argv) == 2:
             c_type = int(argv[1])
-        self.client.centrality(self.cluster, node_id, c_type, query)
+        self.client.get_centrality(self.cluster, node_id, c_type, query)
 
     def do_add_centrality_query(self, param):
         """Syntax: add_centrality_query
@@ -880,8 +769,8 @@ class GraphShell(AbstractGenericShell):
         query = self.get_types_class('preset_query')([], [])
         self.client.remove_shortest_path_query(self.cluster, query)
 
-    def do_shortest_path(self, param):
-        """Syntax: shortest_path src_node dst_node [max_hop]
+    def do_get_shortest_path(self, param):
+        """Syntax: get_shortest_path src_node dst_node [max_hop]
         Calculates the shortest path from src_node to dst_node.
         """
         argv = self.argv(param, 2, 3)
@@ -892,7 +781,7 @@ class GraphShell(AbstractGenericShell):
             max_hop = int(argv[2])
         query = self.get_types_class('preset_query')([], [])
         req = self.get_types_class('shortest_path_req')(src_node, dst_node, max_hop, query)
-        nodes = self.client.shortest_path(self.cluster, req)
+        nodes = self.client.get_shortest_path(self.cluster, req)
         for node in nodes:
             print node
 
@@ -940,8 +829,8 @@ class GraphShell(AbstractGenericShell):
         print "Properties:"
         for key in info.p:
             print "  %s: %s" % (key, info.p[key])
-        print "Source     : %s" % str(info.src)
-        print "Destination: %s" % str(info.tgt)
+        print "Source     : %s" % str(info.source)
+        print "Destination: %s" % str(info.target)
 
     def argv2property(self, argv):
         if len(argv) % 2 != 0:
@@ -951,6 +840,67 @@ class GraphShell(AbstractGenericShell):
         for i in range(len(argv) / 2):
             prop_values[str(argv[i*2])] = str(argv[i*2+1])
         return prop_values
+
+class AnomalyShell(AbstractGenericShell):
+    @staticmethod
+    def engine_name():
+        return 'anomaly'
+
+    def do_clear_row(self, param):
+        """Syntax: clear_row row_id
+        Clear the specified row.
+        """
+        argv = self.argv(param, 1, 1)
+        row_id = argv[0]
+        assert(self.client.clear(self.cluster, row_id) == True)
+
+    def do_add(self, param):
+        """Syntax: add datum_key datum_value [datum_key datum_value ...]
+        Add a point.
+        """
+        argv = self.argv(param, 2)
+        d = self.argv2datum(argv)
+        (row_id, score) = self.client.add(self.cluster, d)
+        print "Row ID: %s" % row_id
+        print "Score: %g" % score
+
+    def do_update(self, param):
+        """Syntax: update row_id datum_key datum_value [datum_key datum_value ...]
+        Update a point.
+        """
+        argv = self.argv(param, 3)
+        row_id = argv[0]
+        d = self.argv2datum(argv[1:])
+        self.verbose("update ID: %s" % row_id)
+        self.verbose("  datum = %s" % d.__dict__)
+        score = self.client.update(self.cluster, row_id, d)
+        print "Score: %g" % score
+
+    def do_clear(self, param):
+        """Syntax: clear
+        Clear the model.
+        """
+        argv = self.argv(param, 0, 0)
+        assert(self.client.clear(self.cluster) == True)
+
+    def do_calc_score(self, param):
+        """Syntax: calc_score datum_key datum_value [datum_key datum_value ...]
+        Calculate an anomaly measure value without adding a point.
+        """
+        argv = self.argv(param, 2)
+        d = self.argv2datum(argv)
+        score = self.client.calc_score(self.cluster, d)
+        print score
+        print "Score: %g" % score
+
+    def do_get_all_rows(self, param):
+        """Syntax: get_all_rows
+        Returns all rows. Note that converted rows will not be displayed.
+        """
+        argv = self.argv(param, 0, 0)
+        rows = self.client.get_all_rows(self.cluster)
+        for row in rows:
+            print row
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Jubatus Interactive Shell Environment', add_help=False)

@@ -7,5 +7,5 @@ Requirements
 ------------
 
 - Python 2.7+
-- Jubatus 0.3.1 ~ 0.3.4
+- Jubatus 0.4.0
 - Jubatus Python Client (`pip install jubatus`)

@@ -122,12 +122,16 @@ class JubaShell(ExtendedCmd):
             print ">> %s" % command
             stop = self.onecmd(command)
             stop = self.postcmd(stop, command)
+            return True
         except ValueError as e:
             print "Invalid argument: %s" % str(e.message)
+            return False
         except msgpackrpc.error.RPCError as e:
             print "RPC Error: " + str(e.message)
+            return False
         except KeyboardInterrupt: # trap Ctrl-C
             print "Interrupted."
+            return False
 
     def precmd(self, line):
         # TODO this runs on every emptylines, fix this
@@ -954,9 +958,10 @@ if __name__ == '__main__':
         sys.exit(1)
 
     if args.script:
+        retval = True
         for line in open(args.script, 'r'):
-            shell.run(line.rstrip())
-        sys.exit(1)
+            retval = shell.run(line.rstrip())
+        sys.exit(0 if retval else 1)
 
     if args.command:
         shell.run(args.command)

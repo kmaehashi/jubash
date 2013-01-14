@@ -453,10 +453,10 @@ class GenericShell(AbstractGenericShell):
             return self.client.call('get_config', name)
 
         def save(self, name, model_id):
-            return self.client.call('save', model_id)
+            return self.client.call('save', name, model_id)
 
         def load(self, name, model_id):
-            return self.client.call('load', model_id)
+            return self.client.call('load', name, model_id)
 
         def get_status(self, name):
             return self.client.call('get_status', name)

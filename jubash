@@ -912,7 +912,6 @@ class AnomalyShell(AbstractGenericShell):
         argv = self.argv(param, 2)
         d = self.argv2datum(argv)
         score = self.client.calc_score(self.cluster, d)
-        print score
         print "Score: %g" % score
 
     def do_get_all_rows(self, param):

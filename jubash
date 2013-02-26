@@ -574,8 +574,9 @@ class RecommenderShell(AbstractGenericShell):
         """
         argv = self.argv(param, 1, 1)
         row_id = argv[0]
-        d = self.client.similar_row_from_id(self.cluster, row_id)
-        self.print_datum(d)
+        results = self.client.similar_row_from_id(self.cluster, row_id, 100) # TODO
+        for result in results:
+            print "%s: %g" % (result[0], result[1])
 
     def do_similar_row_from_datum(self, param):
         """syntax: similar_row_from_datum datum_key datum_value [datum_key datum_value ...]
@@ -583,8 +584,9 @@ class RecommenderShell(AbstractGenericShell):
         """
         argv = self.argv(param, 2)
         d = self.argv2datum(argv)
-        d = self.client.similar_row_from_datum(self.cluster, d)
-        self.print_datum(d)
+        results = self.client.similar_row_from_datum(self.cluster, d, 100) # TODO
+        for result in results:
+            print "%s: %g" % (result[0], result[1])
 
     def do_decode_row(self, param):
         """Syntax: decode_row id

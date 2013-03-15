@@ -528,7 +528,7 @@ class RecommenderShell(AbstractGenericShell):
         """
         argv = self.argv(param, 1, 1)
         row_id = argv[0]
-        self.client.clear(self.cluster, row_id)
+        self.client.clear_row(self.cluster, row_id)
         # TODO: check retval
 
     def do_update_row(self, param):

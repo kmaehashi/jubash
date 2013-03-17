@@ -876,7 +876,7 @@ class AnomalyShell(AbstractGenericShell):
         """
         argv = self.argv(param, 1, 1)
         row_id = argv[0]
-        assert(self.client.clear(self.cluster, row_id) == True)
+        assert(self.client.clear_row(self.cluster, row_id) == True)
 
     def do_add(self, param):
         """Syntax: add datum_key datum_value [datum_key datum_value ...]

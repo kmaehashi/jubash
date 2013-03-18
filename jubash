@@ -67,7 +67,7 @@ class JubaShell(ExtendedCmd):
     """
     Base class of Jubatus shell
     """
-    def __init__(self, host, port, cluster, verbose_mode, keepalive):
+    def __init__(self, host, port, cluster, verbose_mode, keepalive, prompt_format):
         super(JubaShell, self).__init__()
 
         # Server configuration
@@ -79,6 +79,9 @@ class JubaShell(ExtendedCmd):
 
         # Shell configuration
         self.verbose_mode = verbose_mode
+        if not prompt_format:
+            prompt_format = '[Jubatus:%(engine)s<%(cluster)s>@%(host)s:%(port)s] # '
+        self.prompt_format = prompt_format
         # TODO: support history management
 
         # Help configuration
@@ -180,10 +183,7 @@ class JubaShell(ExtendedCmd):
         """
         Call this to update the shell prompt upon reconnection etc.
         """
-        if not hasattr(self, 'prompt_format'):
-            self.prompt = '[Jubatus:' + self.engine_name() + '<' + self.cluster + '>@' + self.host + ':' + str(self.port) + '] # '
-        else:
-            pass #TODO: support custom prompt format
+        self.prompt = self.prompt_format % {'engine': self.engine_name(), 'cluster': self.cluster, 'host': self.host, 'port': str(self.port)}
 
     #################################################################
     # Built-in commands
@@ -328,7 +328,7 @@ class JubaShell(ExtendedCmd):
         return result
 
     @staticmethod
-    def get(host, port, cluster, engine, verbose_mode, keepalive):
+    def get(host, port, cluster, engine, verbose_mode, keepalive, prompt_format):
         """
         Get shell for the specified parameter.
         """
@@ -351,8 +351,8 @@ class JubaShell(ExtendedCmd):
                 engine = engine[4:]
         shells = JubaShell.get_shells()
         if engine in shells.keys():
-            return shells[engine](host, port, cluster, verbose_mode, keepalive)
-        return GenericShell(host, port, cluster, verbose_mode, keepalive)
+            return shells[engine](host, port, cluster, verbose_mode, keepalive, prompt_format)
+        return GenericShell(host, port, cluster, verbose_mode, keepalive, prompt_format)
 
     @staticmethod
     def computil_argnum(text, line, begidx, endidx):
@@ -978,6 +978,7 @@ if __name__ == '__main__':
     parser.add_argument('--cluster',   '-C', type=str, default='')
     parser.add_argument('--engine',    '-e', type=str, default=None, choices=JubaShell.get_shells().keys())
     parser.add_argument('--command',   '-c', type=str, default=None)
+    parser.add_argument('--prompt',    '-p', type=str, default=None)
     parser.add_argument('--keepalive', '-k',           default=False, action='store_true')
     parser.add_argument('--verbose',   '-v',           default=False, action='store_true')
     parser.add_argument('--help',      '-h',           default=False, action='store_true')
@@ -988,7 +989,7 @@ if __name__ == '__main__':
         parser.print_help()
         sys.exit(1)
 
-    shell = JubaShell.get(args.host, args.port, args.cluster, args.engine, args.verbose, args.keepalive)
+    shell = JubaShell.get(args.host, args.port, args.cluster, args.engine, args.verbose, args.keepalive, args.prompt)
     if not shell:
         print "Failed to detect engine."
         sys.exit(1)

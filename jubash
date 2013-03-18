@@ -942,8 +942,8 @@ if __name__ == '__main__':
     parser.add_argument('--cluster', '-C', type=str, default="")
     parser.add_argument('--engine',  '-e', type=str, default=None, choices=JubaShell.get_shells().keys())
     parser.add_argument('--command', '-c', type=str, default=None)
-    parser.add_argument('--script',  '-f', type=str, default=None)
     parser.add_argument('--help',    '-h',           default=None, action="store_true")
+    parser.add_argument('script',          type=str, default=None, nargs='?')
     args = parser.parse_args()
 
     if args.help:

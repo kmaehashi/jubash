@@ -386,8 +386,18 @@ class AbstractGenericShell(JubaShell):
         """
         argv = self.argv(param, 1, 1)
         model_id = argv[0]
-        if not self.client.save(self.cluster, model_id):
-            print "save failed."
+        result = self.client.save(self.cluster, model_id)
+        if not result:
+            print "Failed"
+
+    def do_clear(self, param):
+        """Syntax: clear
+        Clear the model.
+        """
+        argv = self.argv(param, 0, 0)
+        result = self.client.clear(self.cluster)
+        if not result:
+            print "Failed"
 
     def do_load(self, param):
         """Syntax: load model_id
@@ -395,8 +405,9 @@ class AbstractGenericShell(JubaShell):
         """
         argv = self.argv(param, 1, 1)
         model_id = argv[0]
-        if not self.client.load(self.cluster, model_id):
-            print "load failed."
+        result = self.client.load(self.cluster, model_id)
+        if not result:
+            print "Failed"
 
     def do_get_status(self, param):
         """Syntax: get_status
@@ -465,6 +476,9 @@ class GenericShell(AbstractGenericShell):
         def load(self, name, model_id):
             return self.client.call('load', name, model_id)
 
+        def clear(self, name):
+            return self.client.call('clear', name)
+
         def get_status(self, name):
             return self.client.call('get_status', name)
 
@@ -483,7 +497,9 @@ class ClassifierShell(AbstractGenericShell):
         d = self.argv2datum(argv[1:])
         self.verbose("train: label = %s" % label)
         self.verbose("  datum = %s" % d.__dict__)
-        self.client.train(self.cluster, [(label, d)])
+        result = self.client.train(self.cluster, [(label, d)])
+        if result != 1:
+            print "Failed"
 
     def do_classify(self, param):
         """Syntax: classify datum_key datum_value [datum_key datum_value ...]
@@ -513,7 +529,9 @@ class RegressionShell(AbstractGenericShell):
         d = self.argv2datum(argv[1:])
         self.verbose("train: label = %s" % label)
         self.verbose("  datum = %s" % d.__dict__)
-        self.client.train(self.cluster, [(label, d)])
+        result = self.client.train(self.cluster, [(label, d)])
+        if result != 1:
+            print "Failed"
 
     def do_estimate(self, param):
         """Syntax: estimate datum_key datum_value [datum_key datum_value ...]
@@ -540,8 +558,9 @@ class RecommenderShell(AbstractGenericShell):
         """
         argv = self.argv(param, 1, 1)
         row_id = argv[0]
-        self.client.clear_row(self.cluster, row_id)
-        # TODO: check retval
+        result = self.client.clear_row(self.cluster, row_id)
+        if not result:
+            print "Failed"
 
     def do_update_row(self, param):
         """Syntax: update_row row_id datum_key datum_value [datum_key datum_value ...]
@@ -552,15 +571,9 @@ class RecommenderShell(AbstractGenericShell):
         d = self.argv2datum(argv[1:])
         self.verbose("update_row ID: %s" % row_id)
         self.verbose("  datum = %s" % d.__dict__)
-        self.client.update_row(self.cluster, row_id, d)
-
-    def do_clear(self, param):
-        """Syntax: clear
-        Clear the model.
-        """
-        argv = self.argv(param, 0, 0)
-        self.client.clear(self.cluster)
-        # TODO: check retval
+        result = self.client.update_row(self.cluster, row_id, d)
+        if not result:
+            print "Failed"
 
     def do_complete_row_from_id(self, param):
         """Syntax: complete_row_from_id id
@@ -662,7 +675,9 @@ class StatShell(AbstractGenericShell):
         argv = self.argv(param, 2, 2)
         key = str(argv[0])
         value = float(argv[1])
-        self.client.push(self.cluster, key, value)
+        result = self.client.push(self.cluster, key, value)
+        if not result:
+            print "Failed"
 
     def do_sum(self, param):
         """Syntax: sum key
@@ -733,7 +748,9 @@ class GraphShell(AbstractGenericShell):
         """
         argv = self.argv(param, 1, 1)
         node_id = str(argv[0])
-        self.client.remove_node(self.cluster, node_id)
+        result = self.client.remove_node(self.cluster, node_id)
+        if not result:
+            print "Failed"
 
     def do_update_node(self, param):
         """Syntax: update_node node_id [property_key property_value ...]
@@ -742,7 +759,9 @@ class GraphShell(AbstractGenericShell):
         argv = self.argv(param, 1)
         node_id = argv[0]
         prop = self.argv2property(argv[1:])
-        self.client.update_node(self.cluster, node_id, prop)
+        result = self.client.update_node(self.cluster, node_id, prop)
+        if not result:
+            print "Failed"
 
     def do_create_edge(self, param):
         """Syntax: create_edge from_node to_node [property_key property_value ...]
@@ -753,7 +772,8 @@ class GraphShell(AbstractGenericShell):
         to_node_id = str(argv[1])
         prop = self.argv2property(argv[2:])
         info = self.get_types_class('edge')(prop, from_node_id, to_node_id)
-        self.client.create_edge(self.cluster, from_node_id, info)
+        result = self.client.create_edge(self.cluster, from_node_id, info)
+        print "Edge ID: %s" % str(result)
 
     def do_update_edge(self, param):
         """Syntax: update_edge edge_id from_node to_node [property_key property_value ...]
@@ -765,7 +785,9 @@ class GraphShell(AbstractGenericShell):
         to_node_id = str(argv[2])
         prop = self.argv2property(argv[3:])
         info = self.get_types_class('edge')(prop, from_node_id, to_node_id)
-        self.client.update_edge(self.cluster, from_node_id, edge_id, info)
+        result = self.client.update_edge(self.cluster, from_node_id, edge_id, info)
+        if not result:
+            print "Failed"
 
     def do_remove_edge(self, param):
         """Syntax: remove_edge edge_id [from_node]
@@ -777,7 +799,9 @@ class GraphShell(AbstractGenericShell):
         from_node_id = ""
         if len(argv) == 2:
             from_node_id = str(argv[1])
-        self.client.remove_edge(self.cluster, from_node_id, edge_id)
+        result = self.client.remove_edge(self.cluster, from_node_id, edge_id)
+        if not result:
+            print "Failed"
 
     def do_get_centrality(self, param):
         """Syntax: get_centrality node_id [type]
@@ -791,7 +815,8 @@ class GraphShell(AbstractGenericShell):
         query = self.get_types_class('preset_query')([], [])
         if len(argv) == 2:
             c_type = int(argv[1])
-        self.client.get_centrality(self.cluster, node_id, c_type, query)
+        centrality = self.client.get_centrality(self.cluster, node_id, c_type, query)
+        print "%s" % str(centrality)
 
     def do_add_centrality_query(self, param):
         """Syntax: add_centrality_query
@@ -800,7 +825,9 @@ class GraphShell(AbstractGenericShell):
         """
         argv = self.argv(param, 0, 0)
         query = self.get_types_class('preset_query')([], [])
-        self.client.add_centrality_query(self.cluster, query)
+        result = self.client.add_centrality_query(self.cluster, query)
+        if not result:
+            print "Failed"
 
     def do_add_shortest_path_query(self, param):
         """Syntax: add_shortest_path_query
@@ -809,7 +836,9 @@ class GraphShell(AbstractGenericShell):
         """
         argv = self.argv(param, 0, 0)
         query = self.get_types_class('preset_query')([], [])
-        self.client.add_shortest_path_query(self.cluster, query)
+        result = self.client.add_shortest_path_query(self.cluster, query)
+        if not result:
+            print "Failed"
 
     def do_remove_centrality_query(self, param):
         """Syntax: remove_centrality_query
@@ -818,7 +847,9 @@ class GraphShell(AbstractGenericShell):
         """
         argv = self.argv(param, 0, 0)
         query = self.get_types_class('preset_query')([], [])
-        self.client.remove_centrality_query(self.cluster, query)
+        result = self.client.remove_centrality_query(self.cluster, query)
+        if not result:
+            print "Failed"
 
     def do_remove_shortest_path_query(self, param):
         """Syntax: remove_shortest_path_query
@@ -827,7 +858,9 @@ class GraphShell(AbstractGenericShell):
         """
         argv = self.argv(param, 0, 0)
         query = self.get_types_class('preset_query')([], [])
-        self.client.remove_shortest_path_query(self.cluster, query)
+        result = self.client.remove_shortest_path_query(self.cluster, query)
+        if not result:
+            print "Failed"
 
     def do_get_shortest_path(self, param):
         """Syntax: get_shortest_path src_node dst_node [max_hop]
@@ -851,14 +884,9 @@ class GraphShell(AbstractGenericShell):
         You cannot use this method in distributed configuration.
         """
         argv = self.argv(param, 0, 0)
-        self.client.update_index(self.cluster)
-
-    def do_clear(self, param):
-        """Syntax: clear
-        Clear the model.
-        """
-        argv = self.argv(param, 0, 0)
-        self.client.clear(self.cluster)
+        result = self.client.update_index(self.cluster)
+        if not result:
+            print "Failed"
 
     def do_get_node(self, param):
         """Syntax: get_node node_id
@@ -912,7 +940,9 @@ class AnomalyShell(AbstractGenericShell):
         """
         argv = self.argv(param, 1, 1)
         row_id = argv[0]
-        assert(self.client.clear_row(self.cluster, row_id) == True)
+        result = self.client.clear_row(self.cluster, row_id)
+        if not result:
+            print "Failed"
 
     def do_add(self, param):
         """Syntax: add datum_key datum_value [datum_key datum_value ...]
@@ -935,13 +965,6 @@ class AnomalyShell(AbstractGenericShell):
         self.verbose("  datum = %s" % d.__dict__)
         score = self.client.update(self.cluster, row_id, d)
         print "Score: %g" % score
-
-    def do_clear(self, param):
-        """Syntax: clear
-        Clear the model.
-        """
-        argv = self.argv(param, 0, 0)
-        assert(self.client.clear(self.cluster) == True)
 
     def do_calc_score(self, param):
         """Syntax: calc_score datum_key datum_value [datum_key datum_value ...]

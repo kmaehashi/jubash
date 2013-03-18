@@ -528,6 +528,8 @@ class RegressionShell(AbstractGenericShell):
         print "%s" % str(result)
 
 class RecommenderShell(AbstractGenericShell):
+    max_results = 100
+
     @staticmethod
     def engine_name():
         return 'recommender'
@@ -584,7 +586,7 @@ class RecommenderShell(AbstractGenericShell):
         """
         argv = self.argv(param, 1, 1)
         row_id = argv[0]
-        results = self.client.similar_row_from_id(self.cluster, row_id, 100) # TODO
+        results = self.client.similar_row_from_id(self.cluster, row_id, self.max_results)
         for result in results:
             print "%s: %g" % (result[0], result[1])
 
@@ -594,7 +596,7 @@ class RecommenderShell(AbstractGenericShell):
         """
         argv = self.argv(param, 2)
         d = self.argv2datum(argv)
-        results = self.client.similar_row_from_datum(self.cluster, d, 100) # TODO
+        results = self.client.similar_row_from_datum(self.cluster, d, self.max_results)
         for result in results:
             print "%s: %g" % (result[0], result[1])
 
@@ -617,12 +619,36 @@ class RecommenderShell(AbstractGenericShell):
             print row
 
     def do_calc_similarity(self, param):
-        argv = self.argv(param, 0, 0)
-        print "not implemented yet."
+        """Syntax: calc_similarity datum1_key datum1_value ... | datum2_key datum2_value ...
+        Calculates similarity between two datum.
+        Separate two datum records with a bar ('|').
+        """
+        argv = self.argv(param, 4)
+        rhs_offset = argv.index('|')
+        lhs = self.argv2datum(argv[:rhs_offset])
+        rhs = self.argv2datum(argv[rhs_offset+1:])
+        similarity = self.client.calc_similarity(self.cluster, lhs, rhs)
+        print similarity
 
     def do_calc_l2norm(self, param):
-        argv = self.argv(param, 0, 0)
-        print "not implemented yet."
+        """Syntax: calc_l2norm datum_key datum_value ...
+        Calculates L2 norm for the given datum.
+        """
+        argv = self.argv(param, 2)
+        d = self.argv2datum(argv)
+        self.print_datum(d)
+        l2norm = self.client.calc_l2norm(self.cluster, d)
+        print l2norm
+
+    def do_max_results(self, param):
+        """Syntax: max_results [new_value]
+        Displays or changes the maximum number of results for similar_row_from_{id,datum}.
+        """
+        argv = self.argv(param, 0, 1)
+        if len(argv) == 0:
+            print self.max_results
+        else:
+            self.max_results = int(argv[0])
 
 class StatShell(AbstractGenericShell):
     @staticmethod

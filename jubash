@@ -958,7 +958,9 @@ if __name__ == '__main__':
     if args.script:
         retval = True
         for line in open(args.script, 'r'):
-            retval = shell.run(line.rstrip())
+            line = line.rstrip()
+            if line and not line.startswith('#'):
+                retval = shell.run(line)
         sys.exit(0 if retval else 1)
 
     if args.command:

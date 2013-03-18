@@ -965,7 +965,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Jubatus Interactive Shell Environment', add_help=False)
 
     # pre-load external scripts
-    parser.add_argument('--load', '-l', type=str, default=None, action="append", dest="loads")
+    parser.add_argument('--load', '-l', type=str, default=None, action='append', dest='loads',
+                        help='preload external shell provider (for expert users only)')
     (args, _) = parser.parse_known_args()
 
     if args.loads is not None:
@@ -973,16 +974,26 @@ if __name__ == '__main__':
             execfile(load_file)
 
     # arguments
-    parser.add_argument('--host',      '-H', type=str, default='127.0.0.1')
-    parser.add_argument('--port',      '-P', type=int, default=9199)
-    parser.add_argument('--cluster',   '-C', type=str, default='')
-    parser.add_argument('--engine',    '-e', type=str, default=None, choices=JubaShell.get_shells().keys())
-    parser.add_argument('--command',   '-c', type=str, default=None)
-    parser.add_argument('--prompt',    '-p', type=str, default=None)
-    parser.add_argument('--keepalive', '-k',           default=False, action='store_true')
-    parser.add_argument('--verbose',   '-v',           default=False, action='store_true')
-    parser.add_argument('--help',      '-h',           default=False, action='store_true')
-    parser.add_argument('script',            type=str, default=None, nargs='?')
+    parser.add_argument('--host',      '-H', type=str, default='127.0.0.1',
+                        help='hostname or IP address of the server or keeper')
+    parser.add_argument('--port',      '-P', type=int, default=9199,
+                        help='port number of the server or keeper')
+    parser.add_argument('--cluster',   '-C', type=str, default='',
+                        help='cluster name (only required when in distributed mode)')
+    parser.add_argument('--engine',    '-e', type=str, default=None, choices=JubaShell.get_shells().keys(),
+                        help='type of the server; usually auto-detected')
+    parser.add_argument('--command',   '-c', type=str, default=None,
+                        help='run one-shot command instead of interactive shell')
+    parser.add_argument('--prompt',    '-p', type=str, default=None,
+                        help='use customized shell prompt')
+    parser.add_argument('--keepalive', '-k',           default=False, action='store_true',
+                        help='use persistent connection; recommended for servers with timeout disabled')
+    parser.add_argument('--verbose',   '-v',           default=False, action='store_true',
+                        help='turn on verbose mode by default')
+    parser.add_argument('--help',      '-h',           default=False, action='store_true',
+                        help='display usage of this command')
+    parser.add_argument('script',            type=str, default=None, nargs='?',
+                        help='execute the jubash script instead of interactive shell')
     args = parser.parse_args()
 
     if args.help:

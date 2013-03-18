@@ -67,13 +67,15 @@ class JubaShell(ExtendedCmd):
     """
     Base class of Jubatus shell
     """
-    def __init__(self, host, port, cluster, verbose_mode=False):
+    def __init__(self, host, port, cluster, verbose_mode, keepalive):
         super(JubaShell, self).__init__()
 
         # Server configuration
+        self.client = None
         self.host = host
         self.port = port
         self.cluster = cluster
+        self.keepalive = keepalive
 
         # Shell configuration
         self.verbose_mode = verbose_mode
@@ -105,6 +107,7 @@ class JubaShell(ExtendedCmd):
         self.update_prompt()
         while True:
             try:
+                self.connect()
                 self.cmdloop()
                 return
             except ValueError as e:
@@ -113,16 +116,19 @@ class JubaShell(ExtendedCmd):
                 print "RPC Error: " + str(e.message)
             except KeyboardInterrupt: # trap Ctrl-C
                 print
+            except BaseException as e:
+                print "Fatal Error: " + str(e.message)
+            finally:
+                self.disconnect()
 
     def run(self, command):
         """
         Run the given single command.
         """
         try:
-            command = self.precmd(command)
+            self.connect()
             print ">> %s" % command
             stop = self.onecmd(command)
-            stop = self.postcmd(stop, command)
             return True
         except ValueError as e:
             print "Invalid argument: %s" % str(e.message)
@@ -133,14 +139,16 @@ class JubaShell(ExtendedCmd):
         except KeyboardInterrupt: # trap Ctrl-C
             print "Interrupted."
             return False
-
-    def precmd(self, line):
-        # TODO this runs on every emptylines, fix this
-        self.connect(self.host, self.port, self.cluster)
-        return line
+        except BaseException as e:
+            print "Fatal Error: " + str(e.message)
+            return False
+        finally:
+            self.disconnect()
 
     def postcmd(self, stop, line):
-        self.disconnect()
+        if not self.keepalive:
+            self.disconnect()
+            self.connect()
         return stop
 
     def emptyline(self):
@@ -193,13 +201,17 @@ class JubaShell(ExtendedCmd):
         """
         argv = self.argv(param, 2, 3)
         host = argv[0]
-        port = argv[1]
+        port = int(argv[1])
         cluster = self.cluster
         if len(argv) == 3:
             cluster = argv[2]
-        print "Connecting to <%s>@%s:%d..." % (cluster, host, int(port))
         self.disconnect()
-        self.connect(host, int(port), cluster)
+
+        print "Connecting to <%s>@%s:%d..." % (cluster, host, port)
+        self.host = host
+        self.port = port
+        self.cluster = cluster
+        self.connect()
         self.update_prompt()
 
     def do_reconnect(self, param):
@@ -207,8 +219,7 @@ class JubaShell(ExtendedCmd):
         Reconnects to the current server.
         """
         argv = self.argv(param, 0, 0)
-        self.disconnect()
-        self.connect(self.host, self.port, self.cluster)
+        self.connect()
 
     def do_verbose(self, param):
         """Syntax: verbose
@@ -230,19 +241,18 @@ class JubaShell(ExtendedCmd):
     #################################################################
     # RPC connection handling
     #################################################################
-    def connect(self, host, port, cluster):
+    def connect(self):
         """
-        Actually, `connect` does not start TCP connection; just create client instance for RPC call.
+        Discard the current connection (if connected) and create new client instance.
+        Note that TCP connection will not be established until RPC method is called.
         """
-        self.disconnect()
-        self.host = host
-        self.port = port
-        self.cluster = cluster
-        self.client = self.get_client(host, port)
+        if self.is_connected():
+            self.disconnect()
+        self.client = self.get_client(self.host, self.port)
 
     def disconnect(self):
         """
-        Disconnects from the server, if connected.
+        Disconnects from the server (if connected).
         """
         if self.is_connected():
             self.client.client.close()
@@ -253,7 +263,7 @@ class JubaShell(ExtendedCmd):
         `is_connected` returns True, if the client can be closed.
         The TCP connection may already be closed.
         """
-        return hasattr(self, 'client') and self.client is not None
+        return self.client is not None
 
     #################################################################
     # Accessor to client classes
@@ -318,7 +328,7 @@ class JubaShell(ExtendedCmd):
         return result
 
     @staticmethod
-    def get(host, port, cluster, engine=None):
+    def get(host, port, cluster, engine, verbose_mode, keepalive):
         """
         Get shell for the specified parameter.
         """
@@ -341,8 +351,8 @@ class JubaShell(ExtendedCmd):
                 engine = engine[4:]
         shells = JubaShell.get_shells()
         if engine in shells.keys():
-            return shells[engine](host, port, cluster)
-        return GenericShell(host, port, cluster)
+            return shells[engine](host, port, cluster, verbose_mode, keepalive)
+        return GenericShell(host, port, cluster, verbose_mode, keepalive)
 
     @staticmethod
     def computil_argnum(text, line, begidx, endidx):
@@ -937,20 +947,22 @@ if __name__ == '__main__':
             execfile(load_file)
 
     # arguments
-    parser.add_argument('--host',    '-H', type=str, default="127.0.0.1")
-    parser.add_argument('--port',    '-P', type=int, default=9199)
-    parser.add_argument('--cluster', '-C', type=str, default="")
-    parser.add_argument('--engine',  '-e', type=str, default=None, choices=JubaShell.get_shells().keys())
-    parser.add_argument('--command', '-c', type=str, default=None)
-    parser.add_argument('--help',    '-h',           default=None, action="store_true")
-    parser.add_argument('script',          type=str, default=None, nargs='?')
+    parser.add_argument('--host',      '-H', type=str, default='127.0.0.1')
+    parser.add_argument('--port',      '-P', type=int, default=9199)
+    parser.add_argument('--cluster',   '-C', type=str, default='')
+    parser.add_argument('--engine',    '-e', type=str, default=None, choices=JubaShell.get_shells().keys())
+    parser.add_argument('--command',   '-c', type=str, default=None)
+    parser.add_argument('--keepalive', '-k',           default=False, action='store_true')
+    parser.add_argument('--verbose',   '-v',           default=False, action='store_true')
+    parser.add_argument('--help',      '-h',           default=False, action='store_true')
+    parser.add_argument('script',            type=str, default=None, nargs='?')
     args = parser.parse_args()
 
     if args.help:
         parser.print_help()
         sys.exit(1)
 
-    shell = JubaShell.get(args.host, args.port, args.cluster, args.engine)
+    shell = JubaShell.get(args.host, args.port, args.cluster, args.engine, args.verbose, args.keepalive)
     if not shell:
         print "Failed to detect engine."
         sys.exit(1)

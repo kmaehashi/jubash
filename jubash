@@ -439,7 +439,7 @@ class AbstractGenericShell(JubaShell):
         for server_port in status:
             server_stat = status[server_port]
             print "Server %s:%s" % tuple(server_port.split('_'))
-            for key in server_stat:
+            for key in sorted(server_stat.keys()):
                 print "  %s: %s" % (key, server_stat[key])
 
     def print_datum(self, datum):

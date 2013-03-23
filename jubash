@@ -511,6 +511,7 @@ class ClassifierShell(AbstractGenericShell):
         self.verbose("classify:")
         self.verbose("  datum = %s" % d.__dict__)
         results = self.client.classify(self.cluster, [d])[0]
+        results.sort(key=lambda e: e.score, reverse=True)
         for result in results:
             print "%s: %s" % (result.label, str(result.score))
 

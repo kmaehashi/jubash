@@ -483,6 +483,8 @@ class GenericShell(AbstractGenericShell):
             return self.client.call('get_status', name)
 
 class ClassifierShell(AbstractGenericShell):
+    cached_labels = set()
+
     @staticmethod
     def engine_name():
         return 'classifier'
@@ -500,6 +502,12 @@ class ClassifierShell(AbstractGenericShell):
         result = self.client.train(self.cluster, [(label, d)])
         if result != 1:
             print "Failed"
+        self.cached_labels.add(label)
+
+    def complete_train(self, text, line, begidx, endidx):
+        argnum = self.computil_argnum(text, line, begidx, endidx)
+        if argnum == 0:
+            return self.computil_filter(text, self.cached_labels)
 
     def do_classify(self, param):
         """Syntax: classify datum_key datum_value [datum_key datum_value ...]
@@ -514,6 +522,7 @@ class ClassifierShell(AbstractGenericShell):
         results.sort(key=lambda e: e.score, reverse=True)
         for result in results:
             print "%s: %s" % (result.label, str(result.score))
+            self.cached_labels.add(result.label)
 
 class RegressionShell(AbstractGenericShell):
     @staticmethod

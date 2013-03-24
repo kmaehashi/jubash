@@ -601,8 +601,7 @@ class RecommenderShell(AbstractGenericShell):
         argv = self.argv(param, 1, 1)
         row_id = argv[0]
         results = self.client.similar_row_from_id(self.cluster, row_id, self.max_results)
-        for result in results:
-            print "%s: %g" % (result[0], result[1])
+        self.print_similar_result(results)
 
     def do_similar_row_from_datum(self, param):
         """syntax: similar_row_from_datum datum_key datum_value [datum_key datum_value ...]
@@ -611,8 +610,7 @@ class RecommenderShell(AbstractGenericShell):
         argv = self.argv(param, 2)
         d = self.argv2datum(argv)
         results = self.client.similar_row_from_datum(self.cluster, d, self.max_results)
-        for result in results:
-            print "%s: %g" % (result[0], result[1])
+        self.print_similar_result(results)
 
     def do_decode_row(self, param):
         """Syntax: decode_row id
@@ -663,6 +661,11 @@ class RecommenderShell(AbstractGenericShell):
             print self.max_results
         else:
             self.max_results = int(argv[0])
+
+    def print_similar_result(self, results):
+        results.sort(key=lambda e: e[1], reverse=True)
+        for result in results:
+            print "%s: %g" % (result[0], result[1])
 
 class StatShell(AbstractGenericShell):
     @staticmethod

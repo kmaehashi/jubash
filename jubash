@@ -365,7 +365,7 @@ class JubaShell(ExtendedCmd):
 class AbstractGenericShell(JubaShell):
     """
     Generic implementation of the engine-specific shell that implements
-    get_config, save, load and get_status.
+    get_config, save, load, clear and get_status.
     This class cannot be instantiated.
 
     In most cases, you should inherit this class, rather than creating

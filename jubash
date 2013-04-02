@@ -121,6 +121,7 @@ class JubaShell(ExtendedCmd):
                 print
             except BaseException as e:
                 print "Fatal Error: " + str(e.message)
+                break
             finally:
                 self.disconnect()
 

@@ -76,6 +76,7 @@ class JubaShell(ExtendedCmd):
         self.port = port
         self.cluster = cluster
         self.keepalive = keepalive
+        self.timeout = 10
 
         # Shell configuration
         self.verbose_mode = verbose_mode
@@ -233,6 +234,32 @@ class JubaShell(ExtendedCmd):
         else:
             print "Verbose mode turned off."
 
+    def do_keepalive(self, param):
+        """Syntax: keepalive
+        Toggle the keepalive mode.
+        """
+        argv = self.argv(param, 0, 0)
+        self.keepalive = not self.keepalive
+        if self.keepalive:
+            print "Keepalive is enabled"
+        else:
+            print "Keepalive is disabled"
+
+    def do_get_timeout(self, param):
+        """Syntax: get_timeout
+        Display the client-side timeout.
+        """
+        argv = self.argv(param, 0, 0)
+        print("Timeout: %d seconds" % self.client.client._timeout)
+
+    def do_set_timeout(self, param):
+        """Syntax: set_timeout seconds
+        Set the client-side timeout in seconds.
+        """
+        argv = self.argv(param, 1, 1)
+        self.timeout = int(argv[0])
+        self.client.client._timeout = self.timeout
+
     def help_help(self):
         """
         Help for help command.
@@ -250,6 +277,7 @@ class JubaShell(ExtendedCmd):
         if self.is_connected():
             self.disconnect()
         self.client = self.get_client(self.host, self.port)
+        self.client.client._timeout = self.timeout
 
     def disconnect(self):
         """

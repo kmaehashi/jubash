@@ -83,7 +83,6 @@ class JubaShell(ExtendedCmd):
         if not prompt_format:
             prompt_format = '[Jubatus:%(engine)s<%(cluster)s>@%(host)s:%(port)s] # '
         self.prompt_format = prompt_format
-        # TODO: support history management
 
         # Help configuration
         self.doc_header = "Commands:"

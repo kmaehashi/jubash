@@ -119,7 +119,7 @@ class JubaShell(ExtendedCmd):
                 print "RPC Error: " + str(e.message)
             except KeyboardInterrupt: # trap Ctrl-C
                 print
-            except BaseException as e:
+            except JubaShellFatalError as e:
                 print "Fatal Error: " + str(e.message)
                 break
             finally:
@@ -300,13 +300,23 @@ class JubaShell(ExtendedCmd):
         """
         Get client instance for given host and port.
         """
-        return self.get_class('.'.join(['jubatus', self.engine_name(), 'client', self.engine_name()]))(host, port)
+        try:
+            client = self.get_class('.'.join(['jubatus', self.engine_name(), 'client', self.engine_name()]))(host, port)
+        except AttributeError:
+            raise JubaShellFatalError(\
+                'Failed to create the client instance.\n' + \
+                'Maybe you have not installed Jubatus Python client library or the installed one is incompatible with this version of Jubash.')
 
     def get_types_class(self, name):
         """
         Get class for the data structure of given name.
         """
-        return self.get_class('.'.join(['jubatus', self.engine_name(), 'types', name]))
+        try:
+            return self.get_class('.'.join(['jubatus', self.engine_name(), 'types', name]))
+        except AttributeError:
+            raise JubaShellFatalError(\
+                'Failed to create the data structure instance.\n' + \
+                'Maybe you have not installed Jubatus Python client library or the installed one is incompatible with this version of Jubash.')
 
     #################################################################
     # Utilities
@@ -366,14 +376,14 @@ class JubaShell(ExtendedCmd):
             try:
                 results = client.call('get_status', cluster)
                 if len(results) == 0:
-                    return None
+                    raise JubaShellDetectionFailedError('Got empty reply from server', host, port)
             except msgpackrpc.error.RPCError as e:
-                return None
+                raise JubaShellDetectionFailedError('RPC error when requesting get_status to server', host, port)
             finally:
                 client.close()
             result1 = results.popitem()[1]
             if not 'PROGNAME' in result1:
-                return None
+                raise JubaShellDetectionFailedError('No program name returned from server', host, port)
             engine = result1['PROGNAME']
             if engine.startswith('juba'):
                 engine = engine[4:]
@@ -389,6 +399,14 @@ class JubaShell(ExtendedCmd):
     @staticmethod
     def computil_filter(text, candidates):
         return [x for x in candidates if x.startswith(text)]
+
+class JubaShellDetectionFailedError(Exception):
+    def __init__(self, msg, host, port):
+        super(JubaShellDetectionFailedError, self).__init__(msg + ' (%s:%d)' % (host, port))
+
+class JubaShellFatalError(Exception):
+    def __init__(self, *args, **kwargs):
+        super(JubaShellFatalError, self).__init__(*args, **kwargs)
 
 class AbstractGenericShell(JubaShell):
     """
@@ -1064,9 +1082,10 @@ if __name__ == '__main__':
         parser.print_help()
         sys.exit(1)
 
-    shell = JubaShell.get(args.host, args.port, args.cluster, args.engine, args.verbose, args.keepalive, args.prompt)
-    if not shell:
-        print "Failed to detect engine."
+    try:
+        shell = JubaShell.get(args.host, args.port, args.cluster, args.engine, args.verbose, args.keepalive, args.prompt)
+    except JubaShellDetectionFailedError as e:
+        print e.message
         sys.exit(1)
 
     if args.script:

@@ -12,7 +12,7 @@ Requirements
 ------------
 
 - Python 2.7+
-- Jubatus 0.4.2+
+- Jubatus 0.5.0+
 - Jubatus Python Client (`pip install jubatus`)
 
 Installation
@@ -123,3 +123,9 @@ train female height 150 weight 50
 train female height 155 weight 45
 classify height 140 weight 40
 ```
+
+Limitations
+===========
+
+* Currently, clustering and nearest_neighbor servers are not supported.
+* Binary values cannot be specified on the command line.

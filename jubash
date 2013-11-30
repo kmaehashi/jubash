@@ -401,7 +401,7 @@ class JubaShell(ExtendedCmd):
             c = ['jubatus', self.engine_name(), 'types', self._snake2pythonic(name)]
         try:
             return self.get_class('.'.join(c))
-        except AttributeError:
+        except ImportError, AttributeError:
             raise JubaShellFatalError(\
                 'Failed to create the data structure instance.\n' + \
                 'Maybe you have not installed Jubatus Python client library or the installed one is incompatible with this version of Jubash.')
@@ -412,9 +412,9 @@ class JubaShell(ExtendedCmd):
             names = [names]
         try:
             return self.get_class('.'.join(['jubatus', 'common'] + names))
-        except AttributeError:
+        except ImportError, AttributeError:
             raise JubaShellFatalError(\
-                'Failed to create the data structure instance.\n' + \
+                'Failed to create the common data structure instance.\n' + \
                 'Maybe you have not installed Jubatus Python client library or the installed one is incompatible with this version of Jubash.')
 
     @staticmethod

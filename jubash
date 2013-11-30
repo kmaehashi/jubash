@@ -527,7 +527,7 @@ def TMultiDatum(count):
         def min_max(self):
             return (1, None)
 
-    return map(lambda _: TOffsetDatum, xrange(count - 1)) + [TDatum]
+    return [TOffsetDatum] * (count - 1) + [TDatum]
 
 ###############################################################################
 # Errors

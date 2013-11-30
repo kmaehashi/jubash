@@ -132,7 +132,7 @@ def Arguments(*expected_types):
                 try:
                     (consumed, value) = t.convert(params[index:])
                 except ValueError as e:
-                    raise ValueError('argument %d: %s' % (index + 1, e.message))
+                    raise ValueError('argument %d: %s' % (index + 1, str(e)))
                 argv.append(value)
                 index += consumed
             func(self, *argv)
@@ -193,13 +193,13 @@ class JubaShell(ExtendedCmd):
                 self.cmdloop()
                 return
             except ValueError as e:
-                print "Invalid argument: %s; use `help` command for details" % str(e.message)
+                print "Invalid argument: %s; use `help` command for details" % str(e)
             except msgpackrpc.error.RPCError as e:
-                print "RPC Error: " + str(e.message)
+                print "RPC Error: " + str(e)
             except KeyboardInterrupt: # trap Ctrl-C
                 print
             except JubaShellFatalError as e:
-                print "Fatal Error: " + str(e.message)
+                print "Fatal Error: " + str(e)
                 break
             except self.get_common_class(['client', 'InterfaceMismatch']):
                 print "Interface Mismatch Error detected.\n" + \
@@ -221,16 +221,16 @@ class JubaShell(ExtendedCmd):
             stop = self.onecmd(command)
             return True
         except ValueError as e:
-            print "Invalid argument: %s" % str(e.message)
+            print "Invalid argument: %s" % str(e)
             return False
         except msgpackrpc.error.RPCError as e:
-            print "RPC Error: " + str(e.message)
+            print "RPC Error: " + str(e)
             return False
         except KeyboardInterrupt: # trap Ctrl-C
             print "Interrupted."
             return False
         except BaseException as e:
-            print "Fatal Error: " + str(e.message)
+            print "Fatal Error: " + str(e)
             return False
         finally:
             self.disconnect()
@@ -462,7 +462,7 @@ class JubaShell(ExtendedCmd):
                 if len(results) == 0:
                     raise JubaShellDetectionFailedError('Got empty reply from server', host, port)
             except msgpackrpc.error.RPCError as e:
-                raise JubaShellDetectionFailedError('RPC error (%s) while requesting get_status to server' % e.message, host, port)
+                raise JubaShellDetectionFailedError('RPC error (%s) while requesting get_status to server' % str(e), host, port)
             finally:
                 client.close()
             result1 = results.popitem()[1]
@@ -1296,7 +1296,7 @@ Engines:
     try:
         shell = JubaShell.get(args.host, args.port, args.cluster, args.engine, args.verbose, args.keepalive, args.prompt)
     except JubaShellDetectionFailedError as e:
-        print e.message
+        print str(e)
         sys.exit(1)
 
     if len(scripts) != 0:

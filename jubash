@@ -1147,7 +1147,7 @@ class ClusteringShell(AbstractGenericShell):
 
     @Arguments(TDatum)
     def do_get_nearest_center(self, d):
-        """Syntax: get_nearest_neighbor datum_key datum_value [...]
+        """Syntax: get_nearest_center datum_key datum_value [...]
         Returns nearest cluster center without adding point to cluster.
         """
         result = self.client.get_nearest_center(d)

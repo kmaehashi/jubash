@@ -1264,7 +1264,7 @@ Options:
 Engines:
   Following engines are available:
     %(shells)s
-''' % {'shells': str(JubaShell.get_shells().keys())}
+'''
 
     parser = optparse.OptionParser(description='Jubatus Interactive Shell Environment', add_help_option=False)
     parser.error = lambda x: None
@@ -1281,7 +1281,7 @@ Engines:
     parser.add_option('--host',      '-H', type='string', default='127.0.0.1')
     parser.add_option('--port',      '-P', type='int',    default=9199)
     parser.add_option('--cluster',   '-C', type='string', default='')
-    parser.add_option('--engine',    '-e', type='choice', default=None, choices=JubaShell.get_shells().keys())
+    parser.add_option('--engine',    '-e', type='string', default=None)
     parser.add_option('--command',   '-c', type='string', default=None)
     parser.add_option('--prompt',    '-p', type='string', default='[Jubatus:%(engine)s<%(cluster)s>@%(host)s:%(port)s] # ')
     parser.add_option('--keepalive', '-k',                default=False, action='store_true')
@@ -1289,8 +1289,17 @@ Engines:
     parser.add_option('--help',      '-h',                default=False, action='store_true')
     (args, scripts) = parser.parse_args()
 
+    show_help = False
+
+    if args.port < 0 or 65535 < args.port:
+        print "Error: port number out of range"
+        show_help = True
+
     if args.help:
-        print USAGE
+        show_help = True
+
+    if show_help:
+        print USAGE % {'shells': JubaShell.get_shells().keys()}
         sys.exit(1)
 
     try:

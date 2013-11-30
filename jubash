@@ -135,7 +135,7 @@ def Arguments(*expected_types):
                     raise ValueError('argument %d: %s' % (index + 1, str(e)))
                 argv.append(value)
                 index += consumed
-            func(self, *argv)
+            return func(self, *argv)
         wrapper.__doc__ = func.__doc__
         return wrapper
     return wrap_function
@@ -275,7 +275,8 @@ class JubaShell(ExtendedCmd):
     #################################################################
     # Built-in commands
     #################################################################
-    def do_exit(self, param):
+    @Arguments()
+    def do_exit(self):
         """Syntax: exit
         Exit the shell. You can also use EOF (Ctrl-D).
         """

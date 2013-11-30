@@ -11,7 +11,7 @@ Jubash is licensed under LGPL 2.1.
 Requirements
 ------------
 
-- Python 2.7+
+- Python 2.6+
 - Jubatus 0.5.0+
 - Jubatus Python Client (`pip install jubatus`)
 

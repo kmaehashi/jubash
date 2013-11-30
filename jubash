@@ -104,6 +104,8 @@ class Optional(Mandatory):
 
 def Arguments(*expected_types):
     def wrap_function(func):
+        assert func.func_code.co_argcount == len(expected_types) + 1
+
         def wrapper(self, line):
             params = shlex.split(line)
             types = []
@@ -563,7 +565,7 @@ class AbstractGenericShell(JubaShell):
         config = self.client.get_config()
         print json.dumps(json.loads(config), sort_keys=True, indent=4)
 
-    @Arguments()
+    @Arguments(str)
     def do_save(self, model_id):
         """Syntax: save model_id
         Save the model.
@@ -581,7 +583,7 @@ class AbstractGenericShell(JubaShell):
         if not result:
             print "Failed"
 
-    @Arguments()
+    @Arguments(str)
     def do_load(self, model_id):
         """Syntax: load model_id
         Load the given model.

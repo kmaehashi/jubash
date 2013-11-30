@@ -387,7 +387,7 @@ class JubaShell(ExtendedCmd):
         try:
             client_class = self.get_class('.'.join(c))
             return client_class(host, port, cluster, timeout)
-        except AttributeError:
+        except ImportError, AttributeError:
             raise JubaShellFatalError(\
                 'Failed to create the client instance.\n' + \
                 'Maybe you have not installed Jubatus Python client library or the installed one is incompatible with this version of Jubash.')

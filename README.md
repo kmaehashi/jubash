@@ -21,6 +21,7 @@ Installation
 ```
 $ pip install jubatus
 $ wget "https://raw.github.com/kmaehashi/jubash/master/jubash"
+$ chmod +x jubash
 ```
 
 Usage
@@ -127,5 +128,4 @@ classify height 140 weight 40
 Limitations
 ===========
 
-* Currently, clustering and nearest_neighbor servers are not supported.
 * Binary values cannot be specified on the command line.

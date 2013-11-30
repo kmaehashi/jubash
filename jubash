@@ -514,19 +514,20 @@ class TDatum(ArgumentType):
         return (len(args), d)
 
     def min_max(self):
-        return (2, None)
+        return (0, None)
 
 def TMultiDatum(count):
     class TOffsetDatum(TDatum):
         def convert(self, args):
-            target = args
-            delta = 0
-            if '|' in args:
-                target = args[:args.index('|')]
-                delta = 1
-            (consumed, value) = super(TOffsetDatum, self).convert(target)
-            return (consumed + delta, value)
-    return map(lambda _: TOffsetDatum(), xrange(count))
+            if '|' not in args:
+                raise ValueError('insufficient number of datum')
+            (consumed, value) = super(TOffsetDatum, self).convert(args[:args.index('|')])
+            return (consumed + 1, value)
+
+        def min_max(self):
+            return (1, None)
+
+    return map(lambda _: TOffsetDatum, xrange(count - 1)) + [TDatum]
 
 ###############################################################################
 # Errors
@@ -788,6 +789,8 @@ class RecommenderShell(AbstractGenericShell):
         Calculates similarity between two datum.
         Separate two datum records with a bar ('|').
         """
+        self.verbose("lhs: " + str(lhs))
+        self.verbose("rhs: " + str(rhs))
         similarity = self.client.calc_similarity(lhs, rhs)
         print similarity
 

@@ -15,6 +15,14 @@ Requirements
 - Jubatus 0.4.2+
 - Jubatus Python Client (`pip install jubatus`)
 
+Installation
+------------
+
+```
+$ pip install jubatus
+$ wget "https://raw.github.com/kmaehashi/jubash/master/jubash"
+```
+
 Usage
 =====
 

@@ -477,7 +477,7 @@ class JubaShell(ExtendedCmd):
         shells = JubaShell.get_shells()
         if engine in shells.keys():
             return shells[engine](host, port, cluster, verbose_mode, keepalive, prompt_format)
-        print "Warning: Shell not found, falling back to the generic shell."
+        print "Warning: Shell for '%s' not found, falling back to the generic shell." % engine
         return GenericShell(host, port, cluster, verbose_mode, keepalive, prompt_format)
 
     @staticmethod
@@ -537,7 +537,7 @@ def TMultiDatum(count):
 
 class JubaShellDetectionFailedError(Exception):
     def __init__(self, msg, host, port):
-        super(JubaShellDetectionFailedError, self).__init__(msg + ' (%s:%d)' % (host, port))
+        super(JubaShellDetectionFailedError, self).__init__('Failed to auto-detect the engine: ' + msg + ' (%s:%d)' % (host, port))
 
 class JubaShellFatalError(Exception):
     def __init__(self, *args, **kwargs):

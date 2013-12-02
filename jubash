@@ -1231,81 +1231,59 @@ class NearestNeighborShell(AbstractGenericShell):
             print "{:<15} {:>}".format(ent.score, ent.id)
 
 if __name__ == '__main__':
-    USAGE = '''\
-Jubash - Jubatus Shell Environment
-
-Usage:
+    USAGE = '''
   jubash [--host HOST] [--port PORT] [--cluster CLUSTER]
          [--engine ENGINE] [--command COMMAND]
          [--keepalive] [--verbose] [--prompt PROMPT]
          [--load LOAD]
-         [--help] [script ...]
+         [--help] [script ...]'''
+    EPILOG = '  script ...            execute shell script instead of interactive shell'
 
-Options:
-  -H, --host HOST   host name or IP address of the server / proxy
-                    (default: 127.0.0.1)
-  -P, --port PORT   port number of the server / proxy
-                    (default: 9199)
-  -C, --cluster CLUSTER
-                    cluster name; only required when connecting to proxy
-  -e, --engine ENGINE
-                    type of the server; see below for engines available
-                    (default: auto-detect)
-  -c, --command COMMAND
-                    run one-shot command instead of interactive shell
-  -p, --prompt PROMPT
-                    use customized shell prompt
-  -k, --keepalive
-                    use persistent connection; recommended for servers
-                    with timeout disabled
-  -v, --verbose
-                    turn on verbose mode
-  -l, --load LIBRARY
-                    preload external shell provider (for expert users)
-  -h, --help
-                    print the usage and exit
-  script
-                    execute shell script instead of interactive shell
+    parser = optparse.OptionParser(add_help_option=False, usage=USAGE, epilog=EPILOG)
 
-Engines:
-  Following engines are available:
-    %(shells)s
-'''
-
-    parser = optparse.OptionParser(add_help_option=False)
-    parser.error = lambda x: None
-
-    # pre-load external scripts
-    parser.add_option('--load', '-l', type='string', default=None, action='append', dest='loads')
-    (args, _) = parser.parse_args()
+    # arguments
+    parser.add_option('-H', '--host',      type='string', default='127.0.0.1',
+                      help='host name or IP address of the server / proxy (default: %default)')
+    parser.add_option('-P', '--port',      type='int',    default=9199,
+                      help='port number of the server / proxy (default: %default)')
+    parser.add_option('-C', '--cluster',   type='string', default='',
+                      help='cluster name; only required when connecting to proxy')
+    parser.add_option('-e', '--engine',    type='string', default=None,
+                      help='type of the server; see below for engines available (default: auto-detect)')
+    parser.add_option('-c', '--command',   type='string', default=None,
+                      help='run one-shot command instead of interactive shell')
+    parser.add_option('-p', '--prompt',    type='string', default='[Jubatus:%(engine)s<%(cluster)s>@%(host)s:%(port)s] # ',
+                      help='use customized shell prompt')
+    parser.add_option('-k', '--keepalive',                default=False, action='store_true',
+                      help='use persistent connection; recommended for servers with timeout disabled')
+    parser.add_option('--load', '-l',      type='string', default=None, action='append', dest='loads', metavar='LIB',
+                      help='preload external shell provider (for expert users)')
+    parser.add_option('-v', '--verbose',                  default=False, action='store_true',
+                      help='turn on verbose mode')
+    parser.add_option('-h', '--help',                     default=False, action='store_true',
+                      help='print the usage and exit')
+    (args, scripts) = parser.parse_args()
 
     if args.loads is not None:
         for load_file in args.loads:
             execfile(load_file)
 
-    # arguments
-    parser.add_option('--host',      '-H', type='string', default='127.0.0.1')
-    parser.add_option('--port',      '-P', type='int',    default=9199)
-    parser.add_option('--cluster',   '-C', type='string', default='')
-    parser.add_option('--engine',    '-e', type='string', default=None)
-    parser.add_option('--command',   '-c', type='string', default=None)
-    parser.add_option('--prompt',    '-p', type='string', default='[Jubatus:%(engine)s<%(cluster)s>@%(host)s:%(port)s] # ')
-    parser.add_option('--keepalive', '-k',                default=False, action='store_true')
-    parser.add_option('--verbose',   '-v',                default=False, action='store_true')
-    parser.add_option('--help',      '-h',                default=False, action='store_true')
-    (args, scripts) = parser.parse_args()
+    def print_usage():
+        print 'Jubash - Jubatus Shell Environment'
+        print ''
+        parser.print_help()
+        print ''
+        print 'Engines:'
+        print '  Following engines are available:'
+        print '    ' + ', '.join(JubaShell.get_shells().keys())
 
-    show_help = False
+    if args.help:
+        print_usage()
+        sys.exit(0)
 
     if args.port < 0 or 65535 < args.port:
         print "Error: port number out of range"
-        show_help = True
-
-    if args.help:
-        show_help = True
-
-    if show_help:
-        print USAGE % {'shells': JubaShell.get_shells().keys()}
+        print_usage()
         sys.exit(1)
 
     try:

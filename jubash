@@ -184,6 +184,13 @@ class JubaShell(ExtendedCmd):
         """
         raise NotImplementedError
 
+    INTERFACE_MISMATCH_ERROR_MSG = \
+        "Interface Mismatch Error detected.\n" + \
+        "This error occured because either your Jubatus Python client " + \
+        "library is not compatible with the server you are connecting " + \
+        "to, or using incompatible shell (for example, using Classifier " + \
+        "shell against Recommender server.)"
+
     def start(self):
         """
         Start the interactive shell.
@@ -204,12 +211,7 @@ class JubaShell(ExtendedCmd):
                 print "Fatal Error: " + str(e)
                 break
             except self.get_common_class(['client', 'InterfaceMismatch']):
-                print "Interface Mismatch Error detected.\n" + \
-                    "This error occured because either your Jubatus Python client " + \
-                    "library is not compatible with the server you are connecting " + \
-                    "to, or using incompatible shell (for example, using Classifier " + \
-                    "shell against Recommender server.)"
-                break
+                print self.INTERFACE_MISMATCH_ERROR_MSG
             finally:
                 self.disconnect()
 
@@ -231,8 +233,11 @@ class JubaShell(ExtendedCmd):
         except KeyboardInterrupt: # trap Ctrl-C
             print "Interrupted."
             return False
-        except BaseException as e:
+        except JubaShellFatalError as e:
             print "Fatal Error: " + str(e)
+            return False
+        except self.get_common_class(['client', 'InterfaceMismatch']):
+            print self.INTERFACE_MISMATCH_ERROR_MSG
             return False
         finally:
             self.disconnect()

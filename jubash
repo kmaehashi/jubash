@@ -14,7 +14,7 @@
      / /
     |/
 
-Jubash - Jubatus Interactive Shell Environment
+Jubash - Jubatus Shell Environment
 Copyright © 2012-2013 Kenichi Maehashi. All rights reserved.
 
 This library is free software; you can redistribute it and/or
@@ -1232,7 +1232,7 @@ class NearestNeighborShell(AbstractGenericShell):
 
 if __name__ == '__main__':
     USAGE = '''\
-Jubatus Interactive Shell Environment
+Jubash - Jubatus Shell Environment
 
 Usage:
   jubash [--host HOST] [--port PORT] [--cluster CLUSTER]
@@ -1272,7 +1272,7 @@ Engines:
     %(shells)s
 '''
 
-    parser = optparse.OptionParser(description='Jubatus Interactive Shell Environment', add_help_option=False)
+    parser = optparse.OptionParser(add_help_option=False)
     parser.error = lambda x: None
 
     # pre-load external scripts

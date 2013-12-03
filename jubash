@@ -301,7 +301,7 @@ class JubaShell(ExtendedCmd):
         Get client instance for given host and port.
         """
         try:
-            client = self.get_class('.'.join(['jubatus', self.engine_name(), 'client', self.engine_name()]))(host, port)
+            return self.get_class('.'.join(['jubatus', self.engine_name(), 'client', self.engine_name()]))(host, port)
         except AttributeError:
             raise JubaShellFatalError(\
                 'Failed to create the client instance.\n' + \

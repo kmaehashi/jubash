@@ -822,9 +822,9 @@ class RecommenderShell(AbstractGenericShell):
             self.max_results = new_value
 
     def print_similar_result(self, results):
-        results.sort(key=lambda e: e[1], reverse=True)
+        results.sort(key=lambda e: e.score, reverse=True)
         for result in results:
-            print "%s: %g" % (result[0], result[1])
+            print "%s: %g" % (result.id, result.score)
 
 class StatShell(AbstractGenericShell):
     @staticmethod

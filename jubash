@@ -662,7 +662,7 @@ class ClassifierShell(AbstractGenericShell):
         """
         self.verbose("train: label = %s" % label)
         self.verbose("  datum = %s" % d.__dict__)
-        result = self.client.train([(label, d)])
+        result = self.client.train([self.get_types_class('labeled_datum')(label, d)])
         if result != 1:
             print "Failed"
         self.cached_labels.add(label)
@@ -699,7 +699,7 @@ class RegressionShell(AbstractGenericShell):
         """
         self.verbose("train: label = %s" % label)
         self.verbose("  datum = %s" % d.__dict__)
-        result = self.client.train([(label, d)])
+        result = self.client.train([self.get_types_class('scored_datum')(label, d)])
         if result != 1:
             print "Failed"
 
@@ -1031,8 +1031,8 @@ class GraphShell(AbstractGenericShell):
         """
         info = self.client.get_node(node_id)
         print "Properties:"
-        for key in info.p:
-            print "  %s: %s" % (key, info.p[key])
+        for key in info.property:
+            print "  %s: %s" % (key, info.property[key])
         print "In-Edges:"
         print "  %s" % str(info.in_edges)
         print "Out-Edges:"
@@ -1048,8 +1048,8 @@ class GraphShell(AbstractGenericShell):
             from_node_id = "0"
         info = self.client.get_edge(from_node_id, edge_id)
         print "Properties:"
-        for key in info.p:
-            print "  %s: %s" % (key, info.p[key])
+        for key in info.property:
+            print "  %s: %s" % (key, info.property[key])
         print "Source     : %s" % str(info.source)
         print "Destination: %s" % str(info.target)
 
@@ -1072,9 +1072,9 @@ class AnomalyShell(AbstractGenericShell):
         """Syntax: add datum_key datum_value [datum_key datum_value ...]
         Add a point.
         """
-        (row_id, score) = self.client.add(d)
-        print "Row ID: %s" % row_id
-        print "Score: %g" % score
+        point = self.client.add(d)
+        print "Row ID: %s" % point.id
+        print "Score: %g" % point.score
 
     @Arguments(str, TDatum)
     def do_update(self, row_id, d):

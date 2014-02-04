@@ -602,7 +602,10 @@ class RegressionShell(AbstractGenericShell):
         print "%s" % str(result)
 
 class RecommenderShell(AbstractGenericShell):
-    max_results = 100
+    def __init__(self, *args, **kwargs):
+        super(RecommenderShell, self).__init__(*args, **kwargs)
+        self.max_results = 100
+        self.cached_ids = set()
 
     @staticmethod
     def engine_name():
@@ -618,6 +621,9 @@ class RecommenderShell(AbstractGenericShell):
         if not result:
             print "Failed"
 
+    def complete_clear_row(self, text, line, begidx, endidx):
+        return self._complete_id(text, line, begidx, endidx)
+
     def do_update_row(self, param):
         """Syntax: update_row row_id datum_key datum_value [datum_key datum_value ...]
         Update or insert a new row.
@@ -630,6 +636,11 @@ class RecommenderShell(AbstractGenericShell):
         result = self.client.update_row(self.cluster, row_id, d)
         if not result:
             print "Failed"
+        else:
+            self.cached_ids.add(row)
+
+    def complete_update_row(self, text, line, begidx, endidx):
+        return self._complete_id(text, line, begidx, endidx)
 
     def do_complete_row_from_id(self, param):
         """Syntax: complete_row_from_id id
@@ -639,6 +650,9 @@ class RecommenderShell(AbstractGenericShell):
         row_id = argv[0]
         d = self.client.complete_row_from_id(self.cluster, row_id)
         self.print_datum(d)
+
+    def complete_complete_row_from_id(self, text, line, begidx, endidx):
+        return self._complete_id(text, line, begidx, endidx)
 
     def do_complete_row_from_datum(self, param):
         """syntax: complete_row_from_datum datum_key datum_value [datum_key datum_value ...]
@@ -658,6 +672,9 @@ class RecommenderShell(AbstractGenericShell):
         results = self.client.similar_row_from_id(self.cluster, row_id, self.max_results)
         self.print_similar_result(results)
 
+    def complete_similar_row_from_id(self, text, line, begidx, endidx):
+        return self._complete_id(text, line, begidx, endidx)
+
     def do_similar_row_from_datum(self, param):
         """syntax: similar_row_from_datum datum_key datum_value [datum_key datum_value ...]
         Similar row from the given datum.
@@ -676,6 +693,9 @@ class RecommenderShell(AbstractGenericShell):
         d = self.client.decode_row(self.cluster, row_id)
         self.print_datum(d)
 
+    def complete_decode_row(self, text, line, begidx, endidx):
+        return self._complete_id(text, line, begidx, endidx)
+
     def do_get_all_rows(self, param):
         """Syntax: get_all_rows
         Returns all rows. Note that converted rows will not be displayed.
@@ -684,6 +704,7 @@ class RecommenderShell(AbstractGenericShell):
         rows = self.client.get_all_rows(self.cluster)
         for row in rows:
             print row
+            self.cached_ids.add(row)
 
     def do_calc_similarity(self, param):
         """Syntax: calc_similarity datum1_key datum1_value ... | datum2_key datum2_value ...
@@ -721,6 +742,11 @@ class RecommenderShell(AbstractGenericShell):
         results.sort(key=lambda e: e[1], reverse=True)
         for result in results:
             print "%s: %g" % (result[0], result[1])
+
+    def _complete_id(self, text, line, begidx, endidx):
+        argnum = self.computil_argnum(text, line, begidx, endidx)
+        if argnum == 0:
+            return self.computil_filter(text, self.cached_ids)
 
 class StatShell(AbstractGenericShell):
     @staticmethod

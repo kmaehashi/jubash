@@ -637,7 +637,7 @@ class RecommenderShell(AbstractGenericShell):
         if not result:
             print "Failed"
         else:
-            self.cached_ids.add(row)
+            self.cached_ids.add(row_id)
 
     def complete_update_row(self, text, line, begidx, endidx):
         return self._complete_id(text, line, begidx, endidx)

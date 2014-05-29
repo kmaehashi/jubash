@@ -605,6 +605,25 @@ class AbstractGenericShell(JubaShell):
         status = self.client.get_status()
         self.print_status(status)
 
+    @Arguments()
+    def do_get_proxy_status(self):
+        """Syntax: get_proxy_status
+        Displays status of the proxy.
+        Available only when connected to proxies.
+        """
+        status = self.client.get_proxy_status()
+        self.print_status(status)
+
+    @Arguments()
+    def do_do_mix(self):
+        """Syntax: do_mix
+        Trigger MIX.
+        Available only when connected to servers.
+        """
+        result = self.client.client.call('do_mix')
+        if not result:
+            print "Failed"
+
     def print_status(self, status):
         """
         Pretty-print the status structure.
@@ -685,6 +704,26 @@ class ClassifierShell(AbstractGenericShell):
         for result in results:
             print "%s: %s" % (result.label, str(result.score))
             self.cached_labels.add(result.label)
+
+    @Arguments()
+    def do_get_labels(self):
+        """Syntax: get_labels
+        Prints the list of currently registered labels.
+        """
+        labels = self.client.get_labels()
+        for label in labels:
+            print "%s" % label
+        self.cached_labels = set(labels)
+
+    @Arguments(str)
+    def do_set_label(self, label):
+        """Syntax: set_label label
+        Registers the new label without training.
+        """
+        result = self.client.set_label(label)
+        if not result:
+            print "Failed"
+        self.cached_labels.add(label)
 
 class RegressionShell(AbstractGenericShell):
     @staticmethod

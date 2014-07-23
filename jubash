@@ -725,6 +725,13 @@ class ClassifierShell(AbstractGenericShell):
             print "Failed"
         self.cached_labels.add(label)
 
+    @Arguments(str)
+    def do_delete_label(self, label):
+        result = self.client.delete_label(label)
+        if not result:
+            print "Failed"
+        self.cached_labels.discard(label)
+
 class RegressionShell(AbstractGenericShell):
     @staticmethod
     def engine_name():

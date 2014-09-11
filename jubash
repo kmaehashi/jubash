@@ -1244,11 +1244,11 @@ class NearestNeighborShell(AbstractGenericShell):
         self.print_id_with_scores(result)
 
     @Arguments(TDatum)
-    def do_neighbor_row_from_data(self, d):
-        """Syntax: neighbor_row_from_data datum_key datum_value [...]
+    def do_neighbor_row_from_datum(self, d):
+        """Syntax: neighbor_row_from_datum datum_key datum_value [...]
         Get rows that have most similar datum to the given datum.
         """
-        result = self.client.neighbor_row_from_data(d, self.max_results)
+        result = self.client.neighbor_row_from_datum(d, self.max_results)
         self.print_id_with_scores(result)
 
     @Arguments(str)
@@ -1260,11 +1260,11 @@ class NearestNeighborShell(AbstractGenericShell):
         self.print_id_with_scores(result)
 
     @Arguments(TDatum)
-    def do_similar_row_from_data(self, d):
-        """Syntax: similar_row_from_data datum_key datum_value [...]
+    def do_similar_row_from_datum(self, d):
+        """Syntax: similar_row_from_datum datum_key datum_value [...]
         Get rows that have most similar datum to the given datum.
         """
-        result = self.client.similar_row_from_data(d, self.max_results)
+        result = self.client.similar_row_from_datum(d, self.max_results)
         self.print_id_with_scores(result)
 
     @Arguments(Optional(int))

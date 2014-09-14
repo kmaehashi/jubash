@@ -1279,7 +1279,7 @@ class NearestNeighborShell(AbstractGenericShell):
 
     def print_id_with_scores(self, result):
         for ent in result:
-            print "{:<15} {:>}".format(ent.score, ent.id)
+            print "{0:<15} {1:>}".format(ent.score, ent.id)
 
 if __name__ == '__main__':
     USAGE = '''

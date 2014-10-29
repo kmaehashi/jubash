@@ -14,7 +14,7 @@
      / /
     |/
 
-Jubash - Jubatus Shell Environment
+Jubash - Jubatus Shell
 Copyright © 2012-2014 Kenichi Maehashi. All rights reserved.
 
 This library is free software; you can redistribute it and/or
@@ -1320,7 +1320,7 @@ if __name__ == '__main__':
             execfile(load_file)
 
     def print_usage():
-        print 'Jubash - Jubatus Shell Environment'
+        print 'Jubash - Jubatus Shell'
         print ''
         parser.print_help()
         print ''

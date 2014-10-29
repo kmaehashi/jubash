@@ -1326,7 +1326,7 @@ if __name__ == '__main__':
         print ''
         print 'Engines:'
         print '  Following engines are available:'
-        print '    ' + ', '.join(JubaShell.get_shells().keys())
+        print '    ' + ', '.join(sorted(JubaShell.get_shells().keys()))
 
     if args.help:
         print_usage()

@@ -1,10 +1,10 @@
-Jubash
-======
+Jubash: Jubatus Shell
+=====================
 
 Jubash is a shell environment to call [Jubatus](http://jubat.us/) APIs from the command line.
 
-By using `jubash`, you can easily integrate Jubatus with your existing command-line workflow.
-You can also use `jubash` as a handy tool to briefly tasting Jubatus without writing code.
+Jubash can be used as a handy tool to briefly tasting Jubatus without writing code.
+You can also easily integrate Jubatus with your existing command-line workflow or command-based data sources.
 
 Jubash is licensed under LGPL 2.1.
 
@@ -18,8 +18,15 @@ Requirements
 Installation
 ------------
 
+Using git (recommended):
+
 ```
-$ pip install jubatus
+$ git clone https://raw.github.com/kmaehashi/jubash.git
+```
+
+Using wget:
+
+```
 $ wget "https://raw.github.com/kmaehashi/jubash/master/jubash"
 $ chmod +x jubash
 ```

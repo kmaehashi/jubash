@@ -21,7 +21,7 @@ Installation
 Using git (recommended):
 
 ```
-$ git clone https://raw.github.com/kmaehashi/jubash.git
+$ git clone https://github.com/kmaehashi/jubash.git
 ```
 
 Using wget:
@@ -31,8 +31,8 @@ $ wget "https://raw.github.com/kmaehashi/jubash/master/jubash"
 $ chmod +x jubash
 ```
 
-Older Versions
-~~~~~~~~~~~~~~
+Branches
+--------
 
 Jubash for older versions of Jubatus is available as Git branches.
 

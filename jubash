@@ -667,6 +667,9 @@ class GenericShell(AbstractGenericShell):
         def get_status(self):
             return self.client.call('get_status', self.name)
 
+        def get_proxy_status(self):
+            return self.client.call('get_proxy_status', self.name)
+
 class ClassifierShell(AbstractGenericShell):
     cached_labels = set()
 

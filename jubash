@@ -731,6 +731,9 @@ class ClassifierShell(AbstractGenericShell):
 
     @Arguments(str)
     def do_delete_label(self, label):
+        """Syntax: delete_label label
+        Deletes the label.
+        """
         result = self.client.delete_label(label)
         if not result:
             print "Failed"

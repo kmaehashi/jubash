@@ -1195,8 +1195,8 @@ class ClusteringShell(AbstractGenericShell):
         for cluster in result:
             print "[Cluster]"
             for member in cluster:
-                print "  Weight: %g" % (member.weight)
-                print "    Datum: %s" % str(member.point)
+                print "  Datum: %s" % str(member.point)
+                print "    (weight: %g)" % (member.weight)
 
     @Arguments()
     def do_get_k_center(self):
@@ -1223,8 +1223,8 @@ class ClusteringShell(AbstractGenericShell):
         """
         result = self.client.get_nearest_members(d)
         for member in result:
-            print "Weight: %g" % (member.weight)
             print "  Datum: %s" % str(member.point)
+            print "    (weight: %g)" % (member.weight)
 
 class NearestNeighborShell(AbstractGenericShell):
     max_results = 100

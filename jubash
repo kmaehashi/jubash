@@ -579,6 +579,10 @@ class AbstractGenericShell(JubaShell):
         result = self.client.save(model_id)
         if not result:
             print "Failed"
+        if isinstance(result, dict):
+            # Jubatus 0.8.0+ support
+            for (server_id, path) in result.items():
+                print "%s:\t%s" % (server_id, path)
 
     @Arguments()
     def do_clear(self):

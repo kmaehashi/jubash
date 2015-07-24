@@ -1068,7 +1068,7 @@ class GraphShell(AbstractGenericShell):
         Calculates the shortest path from src_node to dst_node.
         """
         if max_hop is None:
-            max_hop = sys.maxint
+            max_hop = pow(2, 32) - 1
         query = self.get_types_class('preset_query')([], [])
         req = self.get_types_class('shortest_path_query')(src_node, dst_node, max_hop, query)
         nodes = self.client.get_shortest_path(req)

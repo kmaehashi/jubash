@@ -12,8 +12,9 @@ Requirements
 ------------
 
 - Python 2.6+
-- Jubatus 0.6.4+
-- Jubatus Python Client 0.6.1+ (`pip install jubatus` or `pip install --upgrade jubatus`)
+  - Note: Python 3.x is not yet supported.
+- Jubatus 0.8.0+
+- Jubatus Python Client 0.8.0+ (`pip install jubatus` or `pip install --upgrade jubatus`)
 
 Installation
 ------------

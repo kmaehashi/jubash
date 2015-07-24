@@ -1005,7 +1005,7 @@ class GraphShell(AbstractGenericShell):
         if not result:
             print "Failed"
 
-    @Arguments(str, int)
+    @Arguments(str, Optional(int))
     def do_get_centrality(self, node_id, c_type):
         """Syntax: get_centrality node_id [type]
         Calculate centrality for the node.

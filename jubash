@@ -975,6 +975,8 @@ class GraphShell(AbstractGenericShell):
         """Syntax: create_edge from_node to_node [property_key property_value ...]
         Create edge.
         """
+        if prop is None:
+            prop = {}
         info = self.get_types_class('edge')(prop, from_node_id, to_node_id)
         result = self.client.create_edge(from_node_id, info)
         print "Edge ID: %s" % str(result)
@@ -984,6 +986,8 @@ class GraphShell(AbstractGenericShell):
         """Syntax: update_edge edge_id from_node to_node [property_key property_value ...]
         Update edge.
         """
+        if prop is None:
+            prop = {}
         info = self.get_types_class('edge')(prop, from_node_id, to_node_id)
         result = self.client.update_edge(from_node_id, edge_id, info)
         if not result:

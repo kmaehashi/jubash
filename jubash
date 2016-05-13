@@ -1162,6 +1162,7 @@ class AnomalyShell(AbstractGenericShell):
         """Syntax: calc_score datum_key datum_value [datum_key datum_value ...]
         Calculate an anomaly measure value without adding a point.
         """
+        self.verbose("datum = %s" % d)
         score = self.client.calc_score(d)
         print "Score: %g" % score
 

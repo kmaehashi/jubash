@@ -716,11 +716,11 @@ class ClassifierShell(AbstractGenericShell):
     @Arguments()
     def do_get_labels(self):
         """Syntax: get_labels
-        Prints the list of currently registered labels.
+        Prints the list of currently registered labels and number of instances trained for each label.
         """
         labels = self.client.get_labels()
-        for label in labels:
-            print "%s" % label
+        for (label, count) in labels.items():
+            print('{0}: {1}'.format(label, count))
         self.cached_labels = set(labels)
 
     @Arguments(str)

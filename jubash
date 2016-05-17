@@ -391,13 +391,14 @@ class JubaShell(ExtendedCmd):
         """
         Get client instance for given host and port.
         """
-        c = ['jubatus', self.engine_name(), 'client', self._snake2pythonic(self.engine_name())]
+        engine = self.engine_name()
+        c = ['jubatus', engine, 'client', self._snake2pythonic(engine)]
         try:
             client_class = self.get_class('.'.join(c))
             return client_class(host, port, cluster, timeout)
         except ImportError, AttributeError:
             raise JubaShellFatalError(\
-                'Failed to create the client instance.\n' + \
+                'Failed to create `{0}` client instance.\n'.format(engine) + \
                 'Maybe you have not installed Jubatus Python client library or the installed one is incompatible with this version of Jubash.')
 
     def get_types_class(self, name):

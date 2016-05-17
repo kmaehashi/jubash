@@ -1462,6 +1462,30 @@ class BanditShell(AbstractGenericShell):
         """
         print self.client.reset(player_id)
 
+class WeightShell(AbstractGenericShell):
+    @staticmethod
+    def engine_name():
+        return 'weight'
+
+    def __init__(self, *args, **kwargs):
+        super(WeightShell, self).__init__(*args, **kwargs)
+
+    @Arguments(TDatum)
+    def do_update(self, d):
+        """Syntax: update datum_key datum_value [...]
+        Updates the model using the datum and calculates weights for it.
+        """
+        for f in self.client.update(d):
+          print('{0}\t{1}'.format(f.key, f.value))
+
+    @Arguments(TDatum)
+    def do_calc_weight(self, d):
+        """Syntax: calc_weight datum_key datum_value [...]
+        Calculates weights for the datum.
+        """
+        for f in self.client.calc_weight(d):
+          print('{0}\t{1}'.format(f.key, f.value))
+
 if __name__ == '__main__':
     USAGE = '''
   jubash [--host HOST] [--port PORT] [--cluster CLUSTER]
